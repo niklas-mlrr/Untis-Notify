@@ -159,6 +159,7 @@ function getTimetable($userId, $date) {
 
 
 
+
 $startTimes = [
     "745" => 1,
     "835" => 2,
@@ -234,26 +235,26 @@ function retrieveFromFile($fileName) {
 
 
 
-$userId = 2995;
-$date = date("Ymd", strtotime("-19 days"));
-$timetable = getTimetable($userId, $date);
-    // echo '<pre>'; 
-    // print_r($timetable);
-    // echo "--------------------------------------------------------------------------";
+// $userId = 2995;
+// $date = date("Ymd", strtotime("-19 days"));
+// $timetable = getTimetable($userId, $date);
+//     // echo '<pre>'; 
+//     // print_r($timetable);
+//     // echo "--------------------------------------------------------------------------";
 
 
-$formatedTimetable = getFormatedTimetable($timetable);
-    echo '<pre>'; 
-    print_r($formatedTimetable);
+// $formatedTimetable = getFormatedTimetable($timetable);
+//     echo '<pre>'; 
+//     print_r($formatedTimetable);
 
 
-    // saveToFile($formatedTimetable, "lastRetrieval.txt");
+//     // saveToFile($formatedTimetable, "lastRetrieval.txt");
 
 
 
-$lastRetrieval = retrieveFromFile("lastRetrieval.txt");
-    echo '<pre>'; 
-    print_r($lastRetrieval);
+// $lastRetrieval = retrieveFromFile("lastRetrieval.txt");
+//     echo '<pre>'; 
+//     print_r($lastRetrieval);
 
 
 
@@ -328,23 +329,23 @@ function compareArrays($array1, $array2) {
 
 
 
-// Ausgabe der Unterschiede
-$compResult = compareArrays($lastRetrieval, $formatedTimetable);
+// // Ausgabe der Unterschiede
+// $compResult = compareArrays($lastRetrieval, $formatedTimetable);
 
-$comResultLen = count($compResult);
-$compResultTitle = array_slice($compResult, 0, intval($comResultLen / 2));
-$comResultMessage = array_slice($compResult, intval($comResultLen / 2));
+// $comResultLen = count($compResult);
+// $compResultTitle = array_slice($compResult, 0, intval($comResultLen / 2));
+// $comResultMessage = array_slice($compResult, intval($comResultLen / 2));
 
 
 
-for ($i = 0; $i < intval($comResultLen / 2); $i++) {
-    $title = $compResultTitle[$i];
-    $message = $comResultMessage[$i];
-    // sendPushoverNotification($title, $message);
-    echo '<pre>'; 
-    echo $title;
-    echo $message;
-}
+// for ($i = 0; $i < intval($comResultLen / 2); $i++) {
+//     $title = $compResultTitle[$i];
+//     $message = $comResultMessage[$i];
+//     // sendPushoverNotification($title, $message);
+//     echo '<pre>'; 
+//     echo $title;
+//     echo $message;
+// }
 
 
 
@@ -365,6 +366,35 @@ for ($i = 0; $i < intval($comResultLen / 2); $i++) {
 
 
 
+
+
+
+
+function getStudents() {
+    $sessionId = loginToWebUntis();
+    $payload = [
+        "id" => "getStudents",
+        "method" => "getStudents",
+        "params" => [
+            "options" => [
+                "fields" => [
+                    'id',
+                    'key',          // Eindeutige ID des Schülers
+                    'name',         // Name des Schülers
+                    'foreName',     // Vorname
+                    'longName',     // Vollständiger Name
+                    'gender',       // Geschlecht
+                ]
+            ]
+        ],
+        "jsonrpc" => "2.0"
+    ];
+    
+    return sendApiRequest($sessionId, $payload);
+}
+
+
+getStudents();
 
 
 
