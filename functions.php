@@ -1,17 +1,27 @@
 <?php
 
 
-// klasseId:329
 
 
-function sendPushoverNotification($title, $message) {
+function sendPushoverNotification($title, $message, $date) {
     $token = "a8o45hxo6bxq2fgu9hpc2spmhxyzr6";
     $user = "usavqqeyudkf9sueqkhsiwdtgosu44";
+
+
+    if($date == date("Ymd")) {
+        $date = "Heute";
+    } elseif($date == date("Ymd", strtotime("+1 days"))) {
+        $date = "Morgen";
+    } elseif($date == date("Ymd", strtotime("+2 days"))) {
+        $date = "Übermorgen";
+    } else {
+        $date = date("d.m", strtotime($date));
+    }
 
     $data = array(
         "token" => $token,
         "user" => $user,
-        "title" => $title,
+        "title" => $date . ": " .$title,
         "message" => $message,
         "url" => "shortcuts://run-shortcut?name=untis",
         "url_title" => "Untis öffnen"
@@ -142,6 +152,33 @@ function getTimetable($sessionId, $userId, $date) {
 }
 
 
+
+function getStudents($sessionId) {
+    $payload = [
+        "id" => "getStudents",
+        "method" => "getStudents",
+        "params" => [],
+        "jsonrpc" => "2.0"
+    ];
+    return sendApiRequest($sessionId, $payload);
+}
+
+
+
+function getStudentIdByName($studentArray, $name) {
+    foreach ($studentArray as $student) {
+        if ($student['name'] === $name) {
+            return $student['id'];
+        }
+    }
+    return null;
+}
+
+
+
+
+
+
 function getCurrentSchoolYear($sessionId) {
     $payload = [
         "id" => "getCurrentSchoolyear",
@@ -169,7 +206,9 @@ $startTimes = [
 
 
 
-
+function cmp($a, $b) {
+    return $a['lessonNum'] - $b['lessonNum'];
+}
 function getFormatedTimetable($timetable) {
     global $startTimes;
     $numOfLessons = count($timetable);
@@ -197,11 +236,9 @@ function getFormatedTimetable($timetable) {
 
 
     // Sort by lessonNum
-    function cmp($a, $b) {
-        return $a['lessonNum'] - $b['lessonNum'];
-    }
-    usort($formatedTimetable,"cmp");
 
+
+    usort($formatedTimetable,"cmp");
 
     return $formatedTimetable;
 }
@@ -226,7 +263,7 @@ $meaningOfChange = [
 
 
 
-function compareArrays($array1, $array2) {
+    function compareArrays($array1, $array2) {
     global $meaningOfChange;
     $differencesTitle = [];     // Stores the tiles for the push notifications
     $differencesMessage = [];   // Stores the body for the push notifications
@@ -235,7 +272,7 @@ function compareArrays($array1, $array2) {
     foreach ($array1 as $key => $item) {
         // Wenn der Index im zweiten Array nicht existiert, markiere dies
         if (!isset($array2[$key])) {
-            $differencesTitle[] = "{$item["subject"]} fehlt nun komplett"; 	//(...  im zweiten Array)
+            $differencesTitle[] = "{$item["lessonNum"]}. Stunde {$item["subject"]} fehlt nun komplett"; 	//(...  im zweiten Array)
             $differencesMessage[] = "";
             continue;
         }
@@ -243,8 +280,8 @@ function compareArrays($array1, $array2) {
         // Vergleiche die einzelnen Werte
         foreach ($item as $subKey => $value) {
             if (!isset($array2[$key][$subKey])) {
-                $differencesTitle[] = "Schlüssel '$subKey'" . $array1[$subKey] . " fehlt in Array 2 bei Index $key";
-                $differencesMessage[] = "";
+                $differencesTitle[] = "Schlüssel '$subKey'" . " fehlt in Array 2 bei Index $key";
+                $differencesMessage[] = ".";
             }
             elseif ($array2[$key][$subKey] !== $value) {
                 $differencesTitle[] = "{$item["lessonNum"]}. Stunde {$item["subject"]} $meaningOfChange[$subKey]";
@@ -262,8 +299,8 @@ function compareArrays($array1, $array2) {
     // Prüfe auch das zweite Array auf zusätzliche Indizes
     foreach ($array2 as $key => $item) {
         if (!isset($array1[$key])) {
-            $differencesTitle[] = "Index $key fehlt im ersten Array";
-            $differencesMessage[] = "";
+            $differencesTitle[] = "{$item["lessonNum"]}. Stunde: Neues Fach";
+            $differencesMessage[] = "{$item["subject"]} bei {$item["teacher"]} in Raum {$item["room"]} ist nun mit dazugekommen";
         }
     }
 
@@ -275,18 +312,20 @@ function compareArrays($array1, $array2) {
 
 
 
-function interpreteResultData($compResult) {
+function interpreteResultDataAndSendNotification($compResult, $date) {
     if ($compResult != "Arrays sind identisch") {
         $comResultLen = count($compResult);
         $compResultTitle = array_slice($compResult, 0, intval($comResultLen / 2));
         $comResultMessage = array_slice($compResult, intval($comResultLen / 2));
 
-        for ($i = 0; $i < intval($comResultLen / 2); $i++) {
+
+        for ($i = 0; $i < count($compResultTitle); $i++) {
             $title = $compResultTitle[$i];
             $message = $comResultMessage[$i];
-            //sendPushoverNotification($title, $message);
-            return "Änderungen vorhanden";
+
+            //sendPushoverNotification($title, $message, $date);
         }
+        return "Änderungen vorhanden";
     } else {
         return NULL;
     }
@@ -326,20 +365,20 @@ function connectToDatabase() {
 
 
 
-function getDataFromDatabase($query) {
+function getDataFromDatabase($query, $date) {
     global $conn;
     $resultArr = [];
 
-    $sql = $query;
-    $result = $conn->query($sql);
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("s", $date);
 
+
+    $stmt->execute();
+    $result = $stmt->get_result();
 
     if ($result->num_rows > 0) {
-        // Output data of each row
         while ($row = $result->fetch_assoc()) {
-            //echo "id: " . $row["id"] . "; timetableData: " . $row["timetableData"] . "<br>";
-            //array_push($resultArr, $row["timetableData"]);
-            return json_decode($row["timetableData"], true);    // Zu Array umwandeln
+            return json_decode($row["timetableData"], true);
         }
     } else {
         return "0 results";
@@ -347,17 +386,41 @@ function getDataFromDatabase($query) {
 }
 
 
-function writeDataToDatabase($table, $input) {
+
+
+/**
+ * @param array $input
+ * @param $date
+ * @param $query
+ */
+function writeDataToDatabase( array $input, $date, $query) {
+   /* @var $conn mysqli */
     global $conn;
 
     $jsonData = json_encode($input);
 
-    $stmt = $conn->prepare("INSERT INTO $table (timetableData) VALUES (?)");
-    $stmt->bind_param("s", $jsonData);
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("ss", $jsonData, $date);
+
 
     if ($stmt->execute()) {
         echo "New record created successfully";
     } else {
+        echo "Error: " . $stmt->error;
+    }
+
+    $stmt->close();
+}
+
+
+function deleteDataFromDatabase($query) {
+    global $conn;
+    $currentDate = date("Ymd");
+
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("s", $currentDate);
+
+    if (!$stmt->execute()) {
         echo "Error: " . $stmt->error;
     }
 
