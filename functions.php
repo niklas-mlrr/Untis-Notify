@@ -142,6 +142,16 @@ function getTimetable($sessionId, $userId, $date) {
 }
 
 
+function getCurrentSchoolYear($sessionId) {
+    $payload = [
+        "id" => "getCurrentSchoolyear",
+        "method" => "getCurrentSchoolyear",
+        "params" => [],
+        "jsonrpc" => "2.0"
+    ];
+    return sendApiRequest($sessionId, $payload);
+}
+
 
 
 $startTimes = [
@@ -238,9 +248,9 @@ function compareArrays($array1, $array2) {
             }
             elseif ($array2[$key][$subKey] !== $value) {
                 $differencesTitle[] = "{$item["lessonNum"]}. Stunde {$item["subject"]} $meaningOfChange[$subKey]";
-                if ($subKey == "canceled" && $item[$subKey] == 1) {
+                if ($subKey == "canceled" && $item[$subKey] == 0) {
                     $differencesMessage[] = "Ausfall";
-                } elseif($item[$subKey] == 0) {
+                } elseif($item[$subKey] == 1) {
                     $differencesMessage[] = "Jetzt kein Ausfall mehr";
                 }else{
                     $differencesMessage[] = "Vorher: $value; Jetzt: {$array2[$key][$subKey]}";
@@ -342,10 +352,15 @@ function writeDataToDatabase($table, $input) {
 
     $jsonData = json_encode($input);
 
-    $sql = "INSERT INTO $table (timetableData) VALUES ('$jsonData')";
-    if ($conn->query($sql) === TRUE) {
+    $stmt = $conn->prepare("INSERT INTO $table (timetableData) VALUES (?)");
+    $stmt->bind_param("s", $jsonData);
+
+    if ($stmt->execute()) {
         echo "New record created successfully";
     } else {
-        echo "Error: " . $sql . "<br>" . $conn->error;
+        echo "Error: " . $stmt->error;
     }
+
+    $stmt->close();
 }
+
