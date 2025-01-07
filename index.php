@@ -35,7 +35,6 @@ if ($username && $username) {
 
             $lastRetrieval = getDataFromDatabase("SELECT * FROM timetables where for_Date  = ?", $date);
 
-
             if($lastRetrieval == "0 results") {
                 writeDataToDatabase($formatedTimetable, $date, "INSERT INTO timetables (timetableData, for_Date) VALUES (?, ?)");
                 continue;

@@ -311,7 +311,6 @@ $meaningOfChange = [
 }
 
 
-
 function interpreteResultDataAndSendNotification($compResult, $date) {
     if ($compResult != "Arrays sind identisch") {
         $comResultLen = count($compResult);
