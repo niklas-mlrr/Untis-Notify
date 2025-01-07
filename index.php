@@ -8,15 +8,12 @@
 <body>
 
 <?php
-// $userId = 2995;
-// $username = "MüllerNik";
-// $password = "RFftJz1n9neBpn,";
 
 
-$userId = $_POST['userid'] ?? null;
+
 $username = $_POST['username'] ?? null;
 $password = $_POST['password'] ?? null;
-if ($userId && $username && $username) {
+if ($username && $username) {
     require "functions.php";
 
     $login = loginToWebUntis($username, $password);
@@ -24,24 +21,36 @@ if ($userId && $username && $username) {
         $loginMessage = '<p class="loginSucessful">Erfolgreich eingeloggt</p>';
         $conn = connectToDatabase();
 
-        //echo "<pre>";
+        $students = getStudents($login);
+        $userId = getStudentIdByName($students, $username);
 
-        $date = date("Ymd", strtotime("-22 days"));
+        $notificationForDaysInAdvance = 7;
+        deleteDataFromDatabase("DELETE FROM timetables WHERE for_Date < ?");
 
-        $timetable = getTimetable($login, $userId, $date);
-        $formatedTimetable = getFormatedTimetable($timetable);
+        for($i = 0; $i < $notificationForDaysInAdvance; $i++) {
+            $date = date("Ymd", strtotime("+$i days"));
 
-        $lastRetrieval = getDataFromDatabase("SELECT * FROM test_speicherung ORDER BY id DESC LIMIT 1;;");
+            $timetable = getTimetable($login, $userId, $date);
+            $formatedTimetable = getFormatedTimetable($timetable);
+
+            $lastRetrieval = getDataFromDatabase("SELECT * FROM timetables where for_Date  = ?", $date);
 
 
-        $compResult = compareArrays($lastRetrieval, $formatedTimetable);
-        print_r($compResult);
-        $result = interpreteResultData($compResult);
+            if($lastRetrieval == "0 results") {
+                writeDataToDatabase($formatedTimetable, $date, "INSERT INTO timetables (timetableData, for_Date) VALUES (?, ?)");
+                continue;
+            }
 
-        if ($result){
-            writeDataToDatabase("test_speicherung", $formatedTimetable);
+
+            $compResult = compareArrays($lastRetrieval, $formatedTimetable);
+            print_r($compResult);
+            $result = interpreteResultDataAndSendNotification($compResult, $date);
+
+
+            if ($result) {
+                writeDataToDatabase($formatedTimetable, $date, "UPDATE timetables SET timetableData = ?, for_Date = ? WHERE for_Date = $date");
+            }
         }
-
 
         $conn->close();
 
@@ -54,18 +63,12 @@ if ($userId && $username && $username) {
 
 
 
-
-
-
-
 ?>
 
     <form action="index.php" method="post">
         <h2>WebUntis API</h2>
         <h4>- Benachrichtigungen für Untis -</h4>
-        <label for="userid">User Id:</label>
-        <input type="text" name="userid" id="userid" required>
-        <br>
+
         <label for="username">Benutzername:</label>
         <input type="text" name="username" id="username" required>
         <br>
