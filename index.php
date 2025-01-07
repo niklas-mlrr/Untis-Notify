@@ -21,12 +21,13 @@ if ($userId && $username && $username) {
 
     $login = loginToWebUntis($username, $password);
     if ($login) {
-        $loginMessage = "Erfolgreich eingeloggt";
+        $loginMessage = '<p class="loginSucessful">Erfolgreich eingeloggt</p>';
         $conn = connectToDatabase();
 
         //echo "<pre>";
 
-        $date = date("Ymd", strtotime("-21 days"));
+        $date = date("Ymd", strtotime("-22 days"));
+
         $timetable = getTimetable($login, $userId, $date);
         $formatedTimetable = getFormatedTimetable($timetable);
 
@@ -45,7 +46,7 @@ if ($userId && $username && $username) {
         $conn->close();
 
     } else {
-        $loginMessage = "Fehler beim Einloggen";
+        $loginMessage = '<p class="loginNotSucessful">Fehler beim Einloggen</p>';
     }
 } else {
     $loginMessage = "";
@@ -74,6 +75,7 @@ if ($userId && $username && $username) {
         <input type="submit" value="Einloggen">
         <br><br>
         <?php echo $loginMessage; ?>
+
     </form>
 </body>
 </html>

@@ -48,3 +48,16 @@ input[type="submit"] {
 input[type="submit"]:hover {
     background-color: #0056b3;
 }
+
+.loginNotSucessful{
+    color: red;
+    font-weight: bold;
+    text-align: center;
+}
+
+.loginSucessful {
+    color: green;
+    font-weight: bold;
+    text-align: center;
+
+}
