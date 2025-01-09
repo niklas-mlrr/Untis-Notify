@@ -1,6 +1,72 @@
 <?php
 
 
+function initiateCheck() {
+    global $username, $password, $conn;
+
+
+    $baseUrl = getDataFromDatabase($username, "school_url", "SELECT school_url FROM users where username  = ?");
+    $login = loginToWebUntis($username, $password, $baseUrl);
+    if ($login) {
+
+
+        $students = getStudents($login);
+        $userId = getStudentIdByName($students, $username);
+
+        $notificationForDaysInAdvance = 7;
+        deleteDataFromDatabase("DELETE FROM timetables WHERE for_Date < ?");
+
+        for ($i = 0; $i < $notificationForDaysInAdvance; $i++) {
+            $date = date("Ymd", strtotime("+$i days"));
+
+            $timetable = getTimetable($login, $userId, $date);
+            $formatedTimetable = getFormatedTimetable($timetable);
+
+            $lastRetrieval = getDataFromDatabase($date, "timetableData", "SELECT * FROM timetables where for_Date  = ?");
+            if ($lastRetrieval->num_rows > 0) {
+                while ($row = $lastRetrieval->fetch_assoc()) {
+                    $lastRetrieval = json_decode($row["timetableData"], true);
+                }
+            } else {
+                $lastRetrieval = "0 results";
+            }
+
+            if ($lastRetrieval == "0 results") {
+                writeTwoArgToDatabase($formatedTimetable, $date, "INSERT INTO timetables (timetableData, for_Date) VALUES (?, ?)");
+                continue;
+            }
+
+
+            $compResult = compareArrays($lastRetrieval, $formatedTimetable);
+            print_r($compResult);
+            $result = interpreteResultDataAndSendNotification($compResult, $date);
+
+
+            if ($result) {
+                writeTwoArgToDatabase($formatedTimetable, $date, "UPDATE timetables SET timetableData = ?, for_Date = ? WHERE for_Date = $date");
+            }
+        }
+
+        $conn->close();
+    }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 function sendPushoverNotification($title, $message, $date) {
@@ -9,19 +75,23 @@ function sendPushoverNotification($title, $message, $date) {
 
 
     if($date == date("Ymd")) {
-        $date = "Heute";
+        $date = "Heute: ";
     } elseif($date == date("Ymd", strtotime("+1 days"))) {
-        $date = "Morgen";
+        $date = "Morgen: ";
     } elseif($date == date("Ymd", strtotime("+2 days"))) {
-        $date = "Übermorgen";
-    } else {
-        $date = date("d.m", strtotime($date));
+        $date = "Übermorgen: ";
+    } elseif(!$date){
+        $date = "";
+    }
+    else {
+        $currentDate = date("d.m", strtotime($date));
+        $date = $currentDate . ": ";
     }
 
     $data = array(
         "token" => $token,
         "user" => $user,
-        "title" => $date . ": " .$title,
+        "title" => $date . $title,
         "message" => $message,
         "url" => "shortcuts://run-shortcut?name=untis",
         "url_title" => "Untis öffnen"
@@ -73,13 +143,6 @@ function loginToWebUntis($username, $password, $baseUrl) {
         //throw new Exception("Login fehlgeschlagen: " . $response);
     }
 }
-
-
-
-
-
-
-
 
 
 

@@ -17,75 +17,25 @@ $password = $_POST['password'] ?? null;
 
 if ($username && $password) {
     require "functions.php";
-    //$username = "test";
 
     $conn = connectToDatabase();
-    $baseUrl = getDataFromDatabase($username, "school_url", "SELECT school_url FROM users where username  = ?");
+
+    $isUserInDatabase =  writeOneArgToDatabase($username, "SELECT * FROM users WHERE username = ?");
+    if (!$isUserInDatabase) {
+        writeTwoArgToDatabase($username, $password, "INSERT INTO users (username, password) VALUES (?, ?)");
+    }
+
+    $loginMessage = '<p class="loginSucessful">Erfolgreich regestriert</p>';
 
 
-    $login = loginToWebUntis($username, $password, $baseUrl);
-    if ($login) {
+    $conn->close();
+    header("Location: settings.php");
 
-
-        $loginMessage = '<p class="loginSucessful">Erfolgreich eingeloggt</p>';
-
-
-
-        $isUserInDatabase =  writeOneArgToDatabase($username, "SELECT * FROM users WHERE username = ?");
-
-        if (!$isUserInDatabase) {
-            writeTwoArgToDatabase($username, $password, "INSERT INTO users (username, password) VALUES (?, ?)");
-        }
-
-
-
-
-        $students = getStudents($login);
-        $userId = getStudentIdByName($students, $username);
-
-        $notificationForDaysInAdvance = 7;
-        deleteDataFromDatabase("DELETE FROM timetables WHERE for_Date < ?");
-
-        for($i = 0; $i < $notificationForDaysInAdvance; $i++) {
-            $date = date("Ymd", strtotime("+$i days"));
-
-            $timetable = getTimetable($login, $userId, $date);
-            $formatedTimetable = getFormatedTimetable($timetable);
-
-            $lastRetrieval = getDataFromDatabase($date, "timetableData", "SELECT * FROM timetables where for_Date  = ?");
-            if ($lastRetrieval->num_rows > 0) {
-                while ($row = $lastRetrieval->fetch_assoc()) {
-                    $lastRetrieval =  json_decode($row["timetableData"], true);
-                }
-            } else {
-                $lastRetrieval = "0 results";
-            }
-
-            if($lastRetrieval == "0 results") {
-                writeTwoArgToDatabase($formatedTimetable, $date, "INSERT INTO timetables (timetableData, for_Date) VALUES (?, ?)");
-                continue;
-            }
-
-
-            $compResult = compareArrays($lastRetrieval, $formatedTimetable);
-            print_r($compResult);
-            $result = interpreteResultDataAndSendNotification($compResult, $date);
-
-
-            if ($result) {
-                writeTwoArgToDatabase($formatedTimetable, $date, "UPDATE timetables SET timetableData = ?, for_Date = ? WHERE for_Date = $date");
-            }
-        }
-
-        $conn->close();
-        //header("Location: settings.php");
 
     } else {
-        $loginMessage = '<p class="loginNotSucessful">Fehler beim Einloggen</p>';
+        $loginMessage = '';
     }
-} else {
-    $loginMessage = "";
-}
+
 
 
 ?>

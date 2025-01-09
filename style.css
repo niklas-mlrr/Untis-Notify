@@ -9,13 +9,22 @@ body {
     height: 100vh;
 }
 
+.parent {
+    display: block;
+    text-align: center;
+}
+
+
+
 form {
     background-color: #fff;
     padding: 25px;
-    /*padding-right: 25px;*/
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     width: 300px;
+    display: block;
+    margin: 0 auto 20px auto;
+
 }
 
 
