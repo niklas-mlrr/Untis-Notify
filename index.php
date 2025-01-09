@@ -13,13 +13,32 @@
 
 $username = $_POST['username'] ?? null;
 $password = $_POST['password'] ?? null;
-if ($username && $username) {
-    require "functions.php";
 
-    $login = loginToWebUntis($username, $password);
+
+if ($username && $password) {
+    require "functions.php";
+    //$username = "test";
+
+    $conn = connectToDatabase();
+    $baseUrl = getDataFromDatabase($username, "school_url", "SELECT school_url FROM users where username  = ?");
+
+
+    $login = loginToWebUntis($username, $password, $baseUrl);
     if ($login) {
+
+
         $loginMessage = '<p class="loginSucessful">Erfolgreich eingeloggt</p>';
-        $conn = connectToDatabase();
+
+
+
+        $isUserInDatabase =  writeOneArgToDatabase($username, "SELECT * FROM users WHERE username = ?");
+
+        if (!$isUserInDatabase) {
+            writeTwoArgToDatabase($username, $password, "INSERT INTO users (username, password) VALUES (?, ?)");
+        }
+
+
+
 
         $students = getStudents($login);
         $userId = getStudentIdByName($students, $username);
@@ -33,10 +52,17 @@ if ($username && $username) {
             $timetable = getTimetable($login, $userId, $date);
             $formatedTimetable = getFormatedTimetable($timetable);
 
-            $lastRetrieval = getDataFromDatabase("SELECT * FROM timetables where for_Date  = ?", $date);
+            $lastRetrieval = getDataFromDatabase($date, "timetableData", "SELECT * FROM timetables where for_Date  = ?");
+            if ($lastRetrieval->num_rows > 0) {
+                while ($row = $lastRetrieval->fetch_assoc()) {
+                    $lastRetrieval =  json_decode($row["timetableData"], true);
+                }
+            } else {
+                $lastRetrieval = "0 results";
+            }
 
             if($lastRetrieval == "0 results") {
-                writeDataToDatabase($formatedTimetable, $date, "INSERT INTO timetables (timetableData, for_Date) VALUES (?, ?)");
+                writeTwoArgToDatabase($formatedTimetable, $date, "INSERT INTO timetables (timetableData, for_Date) VALUES (?, ?)");
                 continue;
             }
 
@@ -47,11 +73,12 @@ if ($username && $username) {
 
 
             if ($result) {
-                writeDataToDatabase($formatedTimetable, $date, "UPDATE timetables SET timetableData = ?, for_Date = ? WHERE for_Date = $date");
+                writeTwoArgToDatabase($formatedTimetable, $date, "UPDATE timetables SET timetableData = ?, for_Date = ? WHERE for_Date = $date");
             }
         }
 
         $conn->close();
+        //header("Location: settings.php");
 
     } else {
         $loginMessage = '<p class="loginNotSucessful">Fehler beim Einloggen</p>';
@@ -59,7 +86,6 @@ if ($username && $username) {
 } else {
     $loginMessage = "";
 }
-
 
 
 ?>
