@@ -44,9 +44,7 @@ function sendPushoverNotification($title, $message, $date) {
 
 
 
-function loginToWebUntis($username, $password) {
-    $school = "gym-osterode";
-    $baseUrl = "https://niobe.webuntis.com/WebUntis/jsonrpc.do?school=$school";
+function loginToWebUntis($username, $password, $baseUrl) {
 
     $loginPayload = [
         "id" => "login",
@@ -322,7 +320,7 @@ function interpreteResultDataAndSendNotification($compResult, $date) {
             $title = $compResultTitle[$i];
             $message = $comResultMessage[$i];
 
-            //sendPushoverNotification($title, $message, $date);
+            sendPushoverNotification($title, $message, $date);
         }
         return "Änderungen vorhanden";
     } else {
@@ -364,46 +362,77 @@ function connectToDatabase() {
 
 
 
-function getDataFromDatabase($query, $date) {
+function getDataFromDatabase($input, $dataFromRow, $query) {
     global $conn;
-    $resultArr = [];
 
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("s", $date);
+    $stmt->bind_param("s", $input);
 
 
     $stmt->execute();
-    $result = $stmt->get_result();
 
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            return json_decode($row["timetableData"], true);
-        }
-    } else {
-        return "0 results";
-    }
+     $result = $stmt->get_result();
+     if ($result->num_rows > 0) {
+         while ($row = $result->fetch_assoc()) {
+             return $row[$dataFromRow];
+         }
+     }
+
+
 }
 
 
 
 
-/**
- * @param array $input
- * @param $date
- * @param $query
- */
-function writeDataToDatabase( array $input, $date, $query) {
+function writeOneArgToDatabase($input, $query) {
+    global $conn;
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("s", $input);
+
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+
+function writeTwoArgToDatabase($inputOne, $inputTwo, $query) {
    /* @var $conn mysqli */
     global $conn;
 
-    $jsonData = json_encode($input);
+    if (is_array($inputOne)) {
+        $inputOne = json_encode($inputOne);
+    }
 
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("ss", $jsonData, $date);
+    $stmt->bind_param("ss", $inputOne, $inputTwo);
 
 
     if ($stmt->execute()) {
-        echo "New record created successfully";
+        echo "Success";
+    } else {
+        echo "Error: " . $stmt->error;
+    }
+
+    $stmt->close();
+}
+
+
+
+function writeFourArgToDatabase($inputOne, $inputTwo, $inputThree, $inputFour, $query) {
+    /* @var $conn mysqli */
+    global $conn;
+
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("ssss", $inputOne, $inputTwo, $inputThree, $inputFour);
+
+
+    if ($stmt->execute()) {
+        echo "Success";
     } else {
         echo "Error: " . $stmt->error;
     }
