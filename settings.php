@@ -16,6 +16,7 @@ $username = $_SESSION['username'] ?? null;
 $password = $_SESSION['password'] ?? null;
 $schoolUrl = $_SESSION['schoolUrl'] ?? null;
 
+
 $conn = connectToDatabase();
 
 
@@ -24,49 +25,43 @@ $pushoverUserKey = getDataWithOneArgFromDatabase($username, "pushover_user_key",
 $notificationForDaysInAdvance = getDataWithOneArgFromDatabase($username, "notification_for_days_in_advance", "SELECT notification_for_days_in_advance FROM users WHERE username = ?");
 
 
-//$var = isset($_POST["name"] ) ? $_POST["name"]: '';
 
-//echo isset($_POST['pushoverApiKey']);
-//
-//if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-//    if ($_POST['pushoverApiKey'])) {
-//        $pushoverApiKey = $_POST['pushoverApiKey'];
-//        $newPushoverApiKey = true;
-//    }
-//    if (isset($_POST['pushoverUserKey'])) {
-//        $pushoverUserKey = $_POST['pushoverUserKey'];
-//        $newPushoverUserKey = true;
-//    }
-//    $notificationForDaysInAdvance = $_POST['notificationDays'];
-//}
-
-//$pushoverApiKey = $_POST['pushoverApiKey'] == "" ?? getDataWithOneArgFromDatabase($username, "pushover_api_key", "SELECT pushover_api_key FROM users WHERE username = ?");
-//$pushoverUserKey = $_POST['pushoverUserKey'] == "" ?? getDataWithOneArgFromDatabase($username, "pushover_user_key", "SELECT pushover_user_key FROM users WHERE username = ?");
-//$notificationForDaysInAdvance = $_POST['notificationDays'] == "" ?? getDataWithOneArgFromDatabase($username, "notification_for_days_in_advance", "SELECT notification_for_days_in_advance FROM users WHERE username = ?");
-
-if($_POST['pushoverApiKey'] == ""){
-    echo "API Key ist leer";
+$newPushoverApiKey = false;
+$newPushoverUserKey = false;
+if(isset($_POST['pushoverApiKey'])) {
+    if ($_POST['pushoverApiKey'] != "") {
+        $pushoverApiKey = $_POST['pushoverApiKey'];
+        $newPushoverApiKey = true;
+    }
+}
+if(isset($_POST['pushoverUserKey'])) {
+    if ($_POST['pushoverUserKey'] != "") {
+        $pushoverUserKey = $_POST['pushoverUserKey'];
+        $newPushoverUserKey = true;
+    }
+    $notificationForDaysInAdvance = $_POST['notificationDays'];
 }
 
-//    echo "API Key: $pushoverApiKey <br>";
-//    echo "User Key: $pushoverUserKey <br>";
-//    echo "Days: $notificationForDaysInAdvance <br>";
 
-    //if($newPushoverApiKey == true && $newPushoverUserKey == true){
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if($newPushoverApiKey && $newPushoverUserKey){
         writeFourArgToDatabase($pushoverApiKey, $pushoverUserKey, $notificationForDaysInAdvance, $username, "UPDATE users SET pushover_api_key = ?, pushover_user_key = ?, notification_for_days_in_advance = ? WHERE username = ?");
-//        $newPushoverApiKey = false;
-//        $newPushoverUserKey = false;
-//    } elseif ($newPushoverApiKey == true){
-//        writeThreeArgToDatabase($pushoverApiKey, $notificationForDaysInAdvance, $username, "UPDATE users SET pushover_api_key = ?, notification_for_days_in_advance = ? WHERE username = ?");
-//        $newPushoverApiKey = false;
-//    } elseif ($newPushoverUserKey == true){
-//        writeThreeArgToDatabase($pushoverUserKey, $notificationForDaysInAdvance, $username, "UPDATE users SET pushover_user_key = ?, notification_for_days_in_advance = ? WHERE username = ?");
-//        $newPushoverUserKey = false;
-//    } else {
-//        writeTwoArgToDatabase($notificationForDaysInAdvance, $username, "UPDATE users SET notification_for_days_in_advance = ? WHERE username = ?");
-//    }
-//
-//    $conn->close();
+        $newPushoverApiKey = false;
+        $newPushoverUserKey = false;
+    } elseif ($newPushoverApiKey){
+        writeThreeArgToDatabase($pushoverApiKey, $notificationForDaysInAdvance, $username, "UPDATE users SET pushover_api_key = ?, notification_for_days_in_advance = ? WHERE username = ?");
+        $newPushoverApiKey = false;
+    } elseif ($newPushoverUserKey){
+        writeThreeArgToDatabase($pushoverUserKey, $notificationForDaysInAdvance, $username, "UPDATE users SET pushover_user_key = ?, notification_for_days_in_advance = ? WHERE username = ?");
+        $newPushoverUserKey = false;
+    } elseif ($notificationForDaysInAdvance){
+        echo "dzjzezj";
+        writeTwoArgToDatabase($notificationForDaysInAdvance, $username, "UPDATE users SET notification_for_days_in_advance = ? WHERE username = ?");
+    }
+$conn->close();
+}
+
 
 
 initiateCheck();
@@ -90,9 +85,6 @@ if (isset($_POST['action'])) {
 }
 
 function logOut(){
-    global $conn;
-
-    $conn->close();
     setcookie(session_name(), '', 100);
     session_unset();
     session_destroy();
