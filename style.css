@@ -22,14 +22,12 @@ form {
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     width: 300px;
-    display: block;
-    margin: 0 auto 20px auto;
-
+    margin-bottom: 10px;
 }
 
 
 label {
-    display: block;
+    display: flex;
     margin-bottom: 10px;
 }
 
@@ -63,7 +61,7 @@ input[type="submit"] {
 }
 
 
-.loginNotSucessful{
+.loginFailed{
     color: red;
     font-weight: bold;
     text-align: center;
@@ -137,3 +135,25 @@ button {
     border-radius: 5px;
 }
 
+
+.img-div {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: block;
+}
+
+.notification-img {
+    max-width: 380px; /* Maximale Breite des Bildes anpassen */
+    height: auto; /* Höhe automatisch anpassen, um das Seitenverhältnis beizubehalten */
+}
+
+.notification-text {
+    background-color: #f4f4f4;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 0;
+    text-align: center;
+}

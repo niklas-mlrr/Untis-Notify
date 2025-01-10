@@ -4,17 +4,24 @@
 function initiateCheck() {
     global $username, $password, $conn;
 
-
-    $baseUrl = getDataFromDatabase($username, "school_url", "SELECT school_url FROM users where username  = ?");
-    $login = loginToWebUntis($username, $password, $baseUrl);
+    $conn = connectToDatabase();
+    $schoolUrl = getDataWithOneArgFromDatabase($username, "school_url", "SELECT school_url FROM users where username  = ?");
+    $login = loginToWebUntis($username, $password, $schoolUrl);
     if ($login) {
 
 
         $students = getStudents($login);
-        $userId = getStudentIdByName($students, $username);
 
-        $notificationForDaysInAdvance = 7;
-        deleteDataFromDatabase("DELETE FROM timetables WHERE for_Date < ?");
+        $currentDate = date("Ymd");
+        deleteDataWithOneArgFromDatabase($currentDate, "DELETE FROM timetables WHERE for_Date < ?");
+
+
+        // for each user:
+
+
+        $userId = getStudentIdByName($students, $username);
+        $notificationForDaysInAdvance = getDataWithOneArgFromDatabase($username, "notification_for_days_in_advance", "SELECT notification_for_days_in_advance FROM users where username  = ?");
+
 
         for ($i = 0; $i < $notificationForDaysInAdvance; $i++) {
             $date = date("Ymd", strtotime("+$i days"));
@@ -22,28 +29,29 @@ function initiateCheck() {
             $timetable = getTimetable($login, $userId, $date);
             $formatedTimetable = getFormatedTimetable($timetable);
 
-            $lastRetrieval = getDataFromDatabase($date, "timetableData", "SELECT * FROM timetables where for_Date  = ?");
-            if ($lastRetrieval->num_rows > 0) {
-                while ($row = $lastRetrieval->fetch_assoc()) {
-                    $lastRetrieval = json_decode($row["timetableData"], true);
-                }
-            } else {
-                $lastRetrieval = "0 results";
+            $lastRetrieval = getDataWithTwoArgFromDatabase($date, $username, "timetableData", "SELECT timetableData FROM timetables where for_Date  = ? AND user = ?");
+
+            if($lastRetrieval){
+                $lastRetrieval = json_decode($lastRetrieval, true);
             }
 
-            if ($lastRetrieval == "0 results") {
-                writeTwoArgToDatabase($formatedTimetable, $date, "INSERT INTO timetables (timetableData, for_Date) VALUES (?, ?)");
+
+
+            if (!$lastRetrieval && $formatedTimetable != NULL) {
+                writeThreeArgToDatabase($formatedTimetable, $date, $username, "INSERT INTO timetables (timetableData, for_Date, user) VALUES (?, ?, ?)");
+                continue;
+            } else if (!$lastRetrieval && $formatedTimetable == NULL) {
                 continue;
             }
 
 
             $compResult = compareArrays($lastRetrieval, $formatedTimetable);
-            print_r($compResult);
+            //print_r($compResult);
             $result = interpreteResultDataAndSendNotification($compResult, $date);
 
 
             if ($result) {
-                writeTwoArgToDatabase($formatedTimetable, $date, "UPDATE timetables SET timetableData = ?, for_Date = ? WHERE for_Date = $date");
+                writeThreeArgToDatabase($formatedTimetable, $date, $username, "UPDATE timetables SET timetableData = ?, for_Date = ?, user = ? WHERE for_Date = $date");
             }
         }
 
@@ -68,25 +76,30 @@ function initiateCheck() {
 
 
 
-
 function sendPushoverNotification($title, $message, $date) {
-    $token = "a8o45hxo6bxq2fgu9hpc2spmhxyzr6";
-    $user = "usavqqeyudkf9sueqkhsiwdtgosu44";
+    global $username;
+
+    $conn = connectToDatabase();
+    $token = getDataWithOneArgFromDatabase($username, "pushover_api_key", "SELECT pushover_api_key FROM users where username  = ?");
+    $user = getDataWithOneArgFromDatabase($username, "pushover_user_key", "SELECT pushover_user_key FROM users where username  = ?");
+    $conn->close();
 
 
-    if($date == date("Ymd")) {
-        $date = "Heute: ";
-    } elseif($date == date("Ymd", strtotime("+1 days"))) {
-        $date = "Morgen: ";
-    } elseif($date == date("Ymd", strtotime("+2 days"))) {
-        $date = "Übermorgen: ";
-    } elseif(!$date){
-        $date = "";
+    switch ($date) {
+        case date("Ymd"):
+            $date = "Heute: ";
+            break;
+        case date("Ymd", strtotime("+1 days")):
+            $date = "Morgen: ";
+            break;
+        case date("Ymd", strtotime("+2 days")):
+            $date = "Übermorgen: ";
+            break;
+        default:
+            $date = $date ? date("d.m", strtotime($date)) . ": " : "";
     }
-    else {
-        $currentDate = date("d.m", strtotime($date));
-        $date = $currentDate . ": ";
-    }
+
+
 
     $data = array(
         "token" => $token,
@@ -103,18 +116,22 @@ function sendPushoverNotification($title, $message, $date) {
     curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-    $response = curl_exec($ch);
+    //$response = curl_exec($ch);
     $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    return $status == 200;
+
+
+echo $status == 200 ? "Benachrichtigung gesendet" : "Fehler beim Senden der Benachrichtigung";
+
 }
 
 
 
 
 
-function loginToWebUntis($username, $password, $baseUrl) {
+
+function loginToWebUntis($username, $password, $schoolUrl) {
 
     $loginPayload = [
         "id" => "login",
@@ -126,7 +143,7 @@ function loginToWebUntis($username, $password, $baseUrl) {
         "jsonrpc" => "2.0"
     ];
 
-    $ch = curl_init($baseUrl);
+    $ch = curl_init($schoolUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($loginPayload));
@@ -278,12 +295,7 @@ function getFormatedTimetable($timetable) {
 
     for($i = 0; $i < $numOfLessons; $i++){
 
-        // Set canceled boolean var
-        if(isset($timetable[$i]["code"])) {
-            $canceled = 1;
-        } else {
-            $canceled = 0;
-        }
+        $canceled = isset($timetable[$i]["code"]) ? 1 : 0;
 
         $lesson = [
             "lessonNum" => $startTimes[$timetable[$i]["startTime"]],
@@ -350,7 +362,9 @@ $meaningOfChange = [
                     $differencesMessage[] = "Ausfall";
                 } elseif($item[$subKey] == 1) {
                     $differencesMessage[] = "Jetzt kein Ausfall mehr";
-                }else{
+                }elseif($subKey == "teacher" && $array2[$key][$subKey] == "") {
+                    $differencesMessage[] = "Lehrer Ausgetragen (Vorher: $value)";
+                } else {
                     $differencesMessage[] = "Vorher: $value; Jetzt: {$array2[$key][$subKey]}";
                 }
             }
@@ -425,25 +439,38 @@ function connectToDatabase() {
 
 
 
-function getDataFromDatabase($input, $dataFromRow, $query) {
+function getDataWithOneArgFromDatabase($input, $dataFromRow, $query) {
     global $conn;
 
     $stmt = $conn->prepare($query);
     $stmt->bind_param("s", $input);
-
-
+    
     $stmt->execute();
+    $result = $stmt->get_result();
 
-     $result = $stmt->get_result();
      if ($result->num_rows > 0) {
          while ($row = $result->fetch_assoc()) {
              return $row[$dataFromRow];
          }
      }
-
-
 }
 
+
+function getDataWithTwoArgFromDatabase($inputOne, $inputTwo, $dataFromRow, $query) {
+    global $conn;
+
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("ss", $inputOne, $inputTwo);
+
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            return $row[$dataFromRow];
+        }
+    }
+}
 
 
 
@@ -466,25 +493,45 @@ function writeOneArgToDatabase($input, $query) {
 function writeTwoArgToDatabase($inputOne, $inputTwo, $query) {
    /* @var $conn mysqli */
     global $conn;
-
     if (is_array($inputOne)) {
         $inputOne = json_encode($inputOne);
     }
-
     $stmt = $conn->prepare($query);
     $stmt->bind_param("ss", $inputOne, $inputTwo);
-
 
     if ($stmt->execute()) {
         echo "Success";
     } else {
         echo "Error: " . $stmt->error;
     }
-
     $stmt->close();
 }
 
 
+function writeThreeArgToDatabase($inputOne, $inputTwo, $inputThree, $query) {
+    /* @var $conn mysqli */
+    global $conn;
+
+    if (is_array($inputOne)) {
+        $inputOne = json_encode($inputOne);
+    }
+    if (is_array($inputTwo)) {
+        $inputTwo = json_encode($inputTwo);
+    }
+    if (is_array($inputThree)) {
+        $inputThree = json_encode($inputThree);
+    }
+
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("sss", $inputOne, $inputTwo, $inputThree);
+
+    if ($stmt->execute()) {
+        echo "Success";
+    } else {
+        echo "Error: " . $stmt->error;
+    }
+    $stmt->close();
+}
 
 function writeFourArgToDatabase($inputOne, $inputTwo, $inputThree, $inputFour, $query) {
     /* @var $conn mysqli */
@@ -504,12 +551,11 @@ function writeFourArgToDatabase($inputOne, $inputTwo, $inputThree, $inputFour, $
 }
 
 
-function deleteDataFromDatabase($query) {
+function deleteDataWithOneArgFromDatabase($input, $query) {
     global $conn;
-    $currentDate = date("Ymd");
 
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("s", $currentDate);
+    $stmt->bind_param("s", $input);
 
     if (!$stmt->execute()) {
         echo "Error: " . $stmt->error;
