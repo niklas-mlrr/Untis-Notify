@@ -116,13 +116,13 @@ function sendPushoverNotification($title, $message, $date) {
     curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-    //$response = curl_exec($ch);
+    $response = curl_exec($ch);
     $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
 
 
-echo $status == 200 ? "Benachrichtigung gesendet" : "Fehler beim Senden der Benachrichtigung";
+return $status == 200 ? true : false;
 
 }
 
@@ -362,7 +362,7 @@ $meaningOfChange = [
                     $differencesMessage[] = "Ausfall";
                 } elseif($item[$subKey] == 1) {
                     $differencesMessage[] = "Jetzt kein Ausfall mehr";
-                }elseif($subKey == "teacher" && $array2[$key][$subKey] == "") {
+                }elseif($subKey == "teacher" && $array2[$key][$subKey] == "---") {
                     $differencesMessage[] = "Lehrer Ausgetragen (Vorher: $value)";
                 } else {
                     $differencesMessage[] = "Vorher: $value; Jetzt: {$array2[$key][$subKey]}";
@@ -419,18 +419,19 @@ function interpreteResultDataAndSendNotification($compResult, $date) {
 
 
 function connectToDatabase() {
-    $servername = "localhost";
-    $username = "root";
-    $password = "root";
-    $database = "untis";
+    $config = include('config.php');
 
-// Create connection
+    $servername = $config['servername'];
+    $username = $config['username'];
+    $password = $config['password'];
+    $database = $config['database'];
+
+    // Create connection
     $conn = new mysqli($servername, $username, $password);
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
 
-// Select database
     $conn->select_db($database);
     return $conn;
 }
@@ -481,11 +482,14 @@ function writeOneArgToDatabase($input, $query) {
 
     $stmt->execute();
     $result = $stmt->get_result();
-
-    if ($result->num_rows > 0) {
-        return true;
-    } else {
+    if(!$result){
         return false;
+    } else {
+        if ($result->num_rows > 0) {
+            return true;
+        } else {
+            return false;
+        }
     }
 }
 
@@ -500,12 +504,13 @@ function writeTwoArgToDatabase($inputOne, $inputTwo, $query) {
     $stmt->bind_param("ss", $inputOne, $inputTwo);
 
     if ($stmt->execute()) {
-        echo "Success";
+        $stmt->close();
+        return true;
     } else {
-        echo "Error: " . $stmt->error;
+        $stmt->close();
+        return false;
     }
-    $stmt->close();
-}
+    }
 
 
 function writeThreeArgToDatabase($inputOne, $inputTwo, $inputThree, $query) {
@@ -526,12 +531,13 @@ function writeThreeArgToDatabase($inputOne, $inputTwo, $inputThree, $query) {
     $stmt->bind_param("sss", $inputOne, $inputTwo, $inputThree);
 
     if ($stmt->execute()) {
-        echo "Success";
+        $stmt->close();
+        return true;
     } else {
-        echo "Error: " . $stmt->error;
+        $stmt->close();
+        return false;
     }
-    $stmt->close();
-}
+    }
 
 function writeFourArgToDatabase($inputOne, $inputTwo, $inputThree, $inputFour, $query) {
     /* @var $conn mysqli */
@@ -542,12 +548,12 @@ function writeFourArgToDatabase($inputOne, $inputTwo, $inputThree, $inputFour, $
 
 
     if ($stmt->execute()) {
-        echo "Success";
+        $stmt->close();
+        return true;
     } else {
-        echo "Error: " . $stmt->error;
+        $stmt->close();
+        return false;
     }
-
-    $stmt->close();
 }
 
 

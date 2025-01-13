@@ -1,3 +1,4 @@
+/* Basis-Stile für Desktop */
 body {
     font-family: Arial, sans-serif;
     background-color: #f4f4f4;
@@ -14,8 +15,6 @@ body {
     text-align: center;
 }
 
-
-
 form {
     background-color: #fff;
     padding: 25px;
@@ -24,7 +23,6 @@ form {
     width: 300px;
     margin-bottom: 10px;
 }
-
 
 label {
     display: flex;
@@ -60,19 +58,15 @@ input[type="submit"] {
     cursor: pointer;
 }
 
-
-.loginFailed{
+.failed {
     color: red;
-    font-weight: bold;
     text-align: center;
 }
 
-.loginSucessful {
+.sucessful {
     color: green;
-    font-weight: bold;
     text-align: center;
 }
-
 
 button {
     border: none;
@@ -87,7 +81,6 @@ button {
     border-radius: 5px;
 }
 
-
 .btn-testbenachrichtigung {
     background-color: #646866;
     width: 100%;
@@ -98,24 +91,20 @@ button {
     width: 100%;
 }
 
-
 .btn-log-out {
     background-color: #646866;
 }
-
 
 .btn-delete-acc {
     background-color: #dd3119;
     width: 51.85%;
 }
 
-
-
 .info-icon {
     display: inline-block;
     width: 25px;
     height: 25px;
-    background-color: #d4d4d4;
+    background-color: #dbdbdb;
     color: black;
     text-align: center;
     border-radius: 50%;
@@ -134,7 +123,6 @@ button {
     width: 81%;
     border-radius: 5px;
 }
-
 
 .img-div {
     position: fixed;
@@ -156,4 +144,41 @@ button {
     border-radius: 5px;
     margin-top: 0;
     text-align: center;
+}
+
+/* Media Queries für mobile Geräte */
+@media (max-width: 600px) {
+    body {
+        flex-direction: column;
+        height: auto;
+        padding: 20px;
+    }
+
+    .parent {
+        width: 100%;
+    }
+
+    form {
+        width: 100%;
+        padding: 15px;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+        width: 100%;
+    }
+
+    .img-div {
+        position: static;
+        transform: none;
+        margin-bottom: 20px;
+    }
+
+    .notification-img {
+        max-width: 100%;
+    }
+
+    .info-field {
+        width: 100%;
+    }
 }
