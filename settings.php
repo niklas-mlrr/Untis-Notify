@@ -11,6 +11,7 @@
 <?php
 require "functions.php";
 session_start();
+$btnResponse = '';
 
 $username = $_SESSION['username'] ?? null;
 $password = $_SESSION['password'] ?? null;
@@ -46,18 +47,33 @@ if(isset($_POST['pushoverUserKey'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if($newPushoverApiKey && $newPushoverUserKey){
-        writeFourArgToDatabase($pushoverApiKey, $pushoverUserKey, $notificationForDaysInAdvance, $username, "UPDATE users SET pushover_api_key = ?, pushover_user_key = ?, notification_for_days_in_advance = ? WHERE username = ?");
+        if(writeFourArgToDatabase($pushoverApiKey, $pushoverUserKey, $notificationForDaysInAdvance, $username, "UPDATE users SET pushover_api_key = ?, pushover_user_key = ?, notification_for_days_in_advance = ? WHERE username = ?")){
+            $btnResponse = '<p class="sucessful">Einstellungen erfolgreich gespeichert</p>';
+        } else {
+            $btnResponse = '<p class="failed">Fehler beim Speichern der Einstellungen</p>';
+        }
         $newPushoverApiKey = false;
         $newPushoverUserKey = false;
     } elseif ($newPushoverApiKey){
-        writeThreeArgToDatabase($pushoverApiKey, $notificationForDaysInAdvance, $username, "UPDATE users SET pushover_api_key = ?, notification_for_days_in_advance = ? WHERE username = ?");
+        if(writeThreeArgToDatabase($pushoverApiKey, $notificationForDaysInAdvance, $username, "UPDATE users SET pushover_api_key = ?, notification_for_days_in_advance = ? WHERE username = ?")){
+            $btnResponse = '<p class="sucessful">Einstellungen erfolgreich gespeichert</p>';
+        } else {
+            $btnResponse = '<p class="failed">Fehler beim Speichern der Einstellungen</p>';
+        }
         $newPushoverApiKey = false;
     } elseif ($newPushoverUserKey){
-        writeThreeArgToDatabase($pushoverUserKey, $notificationForDaysInAdvance, $username, "UPDATE users SET pushover_user_key = ?, notification_for_days_in_advance = ? WHERE username = ?");
+        if(writeThreeArgToDatabase($pushoverUserKey, $notificationForDaysInAdvance, $username, "UPDATE users SET pushover_user_key = ?, notification_for_days_in_advance = ? WHERE username = ?")){
+            $btnResponse = '<p class="sucessful">Einstellungen erfolgreich gespeichert</p>';
+        } else {
+            $btnResponse = '<p class="failed">Fehler beim Speichern der Einstellungen</p>';
+        }
         $newPushoverUserKey = false;
     } elseif ($notificationForDaysInAdvance){
-        echo "dzjzezj";
-        writeTwoArgToDatabase($notificationForDaysInAdvance, $username, "UPDATE users SET notification_for_days_in_advance = ? WHERE username = ?");
+        if(writeTwoArgToDatabase($notificationForDaysInAdvance, $username, "UPDATE users SET notification_for_days_in_advance = ? WHERE username = ?")){
+            $btnResponse = '<p class="sucessful">Einstellungen erfolgreich gespeichert</p>';
+        } else {
+            $btnResponse = '<p class="failed">Fehler beim Speichern der Einstellungen</p>';
+        }
     }
 $conn->close();
 }
@@ -73,13 +89,21 @@ if (isset($_POST['action'])) {
             logOut();
             break;
         case 'deleteAccount':
-            writeOneArgToDatabase($username, "DELETE FROM users WHERE username = ?");
-            echo "Konto gelöscht.";
-            $conn->close();
-            logOut();
+            if(!writeOneArgToDatabase($username, "DELETE FROM users WHERE username = ?")){
+                $btnResponse = '<p class="sucessful">Konto erfolgreich gelöscht</p>';
+                sleep(2);
+                $conn->close();
+                logOut();
+            } else {
+                $btnResponse = '<p class="failed">Fehler beim Löschen des Kontos</p>';
+            }
             break;
         case 'testNotification':
-            sendPushoverNotification("Testbenachrichtigung", "Wenn du das hier ließt, hast du alles richtig gemacht! Ab sofort, erhälst du Benachrichtitigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 15 Min. wind überprüft, ob Änderungen vorhanden sind.", "");
+            if(sendPushoverNotification("Testbenachrichtigung", "Wenn du das hier ließt, hast du alles richtig gemacht! Ab sofort, erhälst du Benachrichtitigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 15 Min. wind überprüft, ob Änderungen vorhanden sind.", "")){
+                $btnResponse = '<p class="sucessful">Testbenachrichtigung erfolgreich gesendet</p>';
+            } else {
+                $btnResponse = '<p class="failed">Fehler beim Senden der Testbenachrichtigung</p>';
+            }
             break;
     }
 }
@@ -89,12 +113,10 @@ function logOut(){
     session_unset();
     session_destroy();
     $_SESSION = array();
-    header("Location: startpage.php");
+    header("Location: index.php");
 }
 
 ?>
-
-
 
 
 
@@ -119,7 +141,7 @@ function logOut(){
         <br><br>
 
 
-        <label for="notificationDays">Für wie viele Tage im Voraus möchtest du benachrichtigt werden, wenn Änderungen auftreten?</label>
+        <label for="notificationDays">Wie viele Tage im Voraus sollen auf Änderungen geprüft werden?</label>
         <div class="label-container">
             <input type="range" id="notificationDays" name="notificationDays" min="1" max="30" value="<?php echo $notificationForDaysInAdvance;?>" oninput="this.nextElementSibling.value = this.value">
             <output><?php echo $notificationForDaysInAdvance;?></output>
@@ -128,6 +150,8 @@ function logOut(){
         <br><br>
 
         <button class="btn-save-settings" type="submit">Einstellungen speichern</button>
+        <br><br>
+        <?php echo $btnResponse; ?>
     </form>
     <form action="settings.php" method="post">
         <button class="btn-testbenachrichtigung" type="submit" name="action" value="testNotification">Testbenachrichtigung senden</button><br>

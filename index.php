@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <title>WebUntis API</title>
+    <title>Untis Notify</title>
     <link rel="stylesheet" href="style.css">
 
 </head>
@@ -33,12 +33,12 @@ if ($username && $password && $schoolUrl) {
         $_SESSION['schoolUrl'] = $schoolUrl;
 
 
-        $loginMessage = '<p class="loginSucessful">Erfolgreich regestriert</p>';
+        $loginMessage = '<p class="sucessful">Erfolgreich regestriert</p>';
         $conn->close();
         header("Location: settings.php");
         exit();
     } else {
-        $loginMessage = '<p class="loginFailed">Fehler beim Einloggen</p>';
+        $loginMessage = '<p class="failed">Fehler beim Einloggen</p>';
     }
 } else {
     $loginMessage = '';
@@ -53,8 +53,8 @@ if ($username && $password && $schoolUrl) {
 <br>
 <div class="parent">
 
-    <form action="startpage.php" method="post">
-        <h2>WebUntis API</h2>
+    <form action="index.php" method="post">
+        <h2>Untis Notify</h2>
         <h4>- Benachrichtigungen für Untis -</h4>
 
 
@@ -66,14 +66,14 @@ if ($username && $password && $schoolUrl) {
         <div class="info-field" id="info-schoolUrl">Hier muss nichts eingegeben werden, wenn du auf dem TRG bist.</div>
         <br>
 
-        <label for="pushoverUserKey">Benutzername:</label>
+        <label for="pushoverUserKey">Untis Benutzername:</label>
         <div class="label-container">
             <input type="text" id="username" name="username" required>
             <span class="info-icon" onclick="openExternInfoSite('username')">?</span>
         </div>
         <br>
 
-        <label for="pushoverUserKey">Passwort:</label>
+        <label for="pushoverUserKey">Untis Passwort:</label>
         <div class="label-container">
             <input type="password" id="password" name="password" required>
             <span class="info-icon" onclick="openExternInfoSite('password')">?</span>
