@@ -1,0 +1,5 @@
+# Ignoriere die Datei config.php
+config.php
+
+# Ignoriere alle .log-Dateien
+*.log
