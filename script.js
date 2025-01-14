@@ -15,11 +15,8 @@ document.addEventListener('click', function(event) {
 function openExternInfoSite(info) {
     var url = "";
     switch(info) {
-        case "ApiKey":
-            url = "https://pushover.net/apps/build";
-            break;
-        case "UserKey":
-            url = "https://pushover.net/apps/build";
+        case "BotToken":
+            url = "https://niklas.craft.me/Untis-Benachrichtigungen-Anleitung/b/717766C2-54B5-48A3-8677-0BC20BB2221A/Slack-Bot-Token-generieren";
             break;
         case "TageInVorraus":
             url = "https://niklas.craft.me/Untis-Benachrichtigungen-Anleitung/b/594ADF73-6DE4-40AB-9B9A-A668C4A53721/F%C3%BCr-wie-viele-Tage-im-Voraus-m%C3%B6chtes";
