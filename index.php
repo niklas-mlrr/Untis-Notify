@@ -2,8 +2,8 @@
 <html lang="de">
 <head>
     <title>Untis Notify</title>
+    <meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
-
 </head>
 <body>
 
@@ -22,7 +22,7 @@ if ($username && $password && $schoolUrl) {
     if ($login) {
 
         $conn = connectToDatabase();
-        $isUserInDatabase = writeOneArgToDatabase($username, "SELECT * FROM users WHERE username = ?");
+        $isUserInDatabase = writeTwoArgToDatabase(true, $username, $password, "SELECT * FROM users WHERE username = ? AND password = ?");;
         if (!$isUserInDatabase) {
             writeThreeArgToDatabase($username, $password, $schoolUrl, "INSERT INTO users (username, password, school_url) VALUES (?, ?, ?)");
         }
@@ -33,7 +33,7 @@ if ($username && $password && $schoolUrl) {
         $_SESSION['schoolUrl'] = $schoolUrl;
 
 
-        $loginMessage = '<p class="sucessful">Erfolgreich regestriert</p>';
+        $loginMessage = '<p class="successful">Erfolgreich regestriert</p>';
         $conn->close();
         header("Location: settings.php");
         exit();
@@ -47,10 +47,11 @@ if ($username && $password && $schoolUrl) {
 
 <div class="img-div">
     <img class="notification-img" src="notification example.png" alt="Notification Example">
-    <p class="notification-text">↑ Beispiel einer Benachrichtigung ↑</p>
 </div>
+<br><br><br><br>
+<p class="notification-text">↑ Beispiel einer Benachrichtigung ↑</p>
 
-<br>
+
 <div class="parent">
 
     <form action="index.php" method="post">
@@ -66,14 +67,14 @@ if ($username && $password && $schoolUrl) {
         <div class="info-field" id="info-schoolUrl">Hier muss nichts eingegeben werden, wenn du auf dem TRG bist.</div>
         <br>
 
-        <label for="pushoverUserKey">Untis Benutzername:</label>
+        <label for="username">Untis Benutzername:</label>
         <div class="label-container">
             <input type="text" id="username" name="username" required>
             <span class="info-icon" onclick="openExternInfoSite('username')">?</span>
         </div>
         <br>
 
-        <label for="pushoverUserKey">Untis Passwort:</label>
+        <label for="password">Untis Passwort:</label>
         <div class="label-container">
             <input type="password" id="password" name="password" required>
             <span class="info-icon" onclick="openExternInfoSite('password')">?</span>
