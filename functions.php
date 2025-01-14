@@ -5,6 +5,10 @@ function initiateCheck() {
     global $username, $password, $conn;
 
     $conn = connectToDatabase();
+    $setupComplete = getDataWithOneArgFromDatabase($username, "setup_complete", "SELECT setup_complete FROM users where username  = ?");
+    if (!$setupComplete) {
+        return;
+    }
     $schoolUrl = getDataWithOneArgFromDatabase($username, "school_url", "SELECT school_url FROM users where username  = ?");
     $login = loginToWebUntis($username, $password, $schoolUrl);
     if ($login) {
@@ -46,7 +50,6 @@ function initiateCheck() {
 
 
             $compResult = compareArrays($lastRetrieval, $formatedTimetable);
-            //print_r($compResult);
             $result = interpreteResultDataAndSendNotification($compResult, $date);
 
 
@@ -63,6 +66,109 @@ function initiateCheck() {
 
 
 
+
+
+/**
+ * Sends a message to a slack channel using the slack Web API
+ *
+ * @param string $message The message to send
+ * @param string $channel The channel to send the message to (e.g. "#general")
+ * @param string $bot_token Your slack bot user OAuth token
+ * @return array Response from slack API
+ * @throws Exception If the API request fails
+ */
+function sendslackMessage($title, $message, $date) {
+    global $username;
+    $url = 'https://slack.com/api/chat.postMessage';
+
+
+    $botToken = getDataWithOneArgFromDatabase($username, "slack_bot_token", "SELECT slack_bot_token FROM users where username  = ?");
+
+
+    switch ($date) {
+        case date("Ymd"):
+            $date = "Heute: ";
+            break;
+        case date("Ymd", strtotime("+1 days")):
+            $date = "Morgen: ";
+            break;
+        case date("Ymd", strtotime("+2 days")):
+            $date = "Übermorgen: ";
+            break;
+        default:
+            $date = $date ? date("d.m", strtotime($date)) . ": " : " ";
+    }
+
+
+    // Prepare the payload
+    $payload = array(
+        'channel' => "untis-notify",
+        "blocks" => [
+    [
+        "type" => "section",
+        "text" => [
+            "type" => "mrkdwn",
+            "text" => "$date"
+        ]
+    ],
+
+    [
+        "type" => "section",
+        "text" => [
+            "type" => "mrkdwn",
+            "text" => "$title"
+        ]
+    ],
+    [
+        "type" => "section",
+        "text" => [
+            "type" => "mrkdwn",
+            "text" => "*$message*"
+        ]
+    ],
+    [
+        "type" => "divider"
+    ]
+]
+
+    );
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, array(
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => array(
+            'Authorization: Bearer ' . $botToken,
+            'Content-Type: application/json; charset=utf-8'
+        ),
+        CURLOPT_POSTFIELDS => json_encode($payload)
+    ));
+
+    $response = curl_exec($ch);
+    $error = curl_error($ch);
+
+    if ($error) {
+        curl_close($ch);
+        throw new Exception("cURL Error: $error");
+    }
+
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $response_data = json_decode($response, true);
+
+    if ($http_code !== 200) {
+        throw new Exception("HTTP Error: $http_code - " .
+            ($response_data['error'] ?? 'Unknown error'));
+    }
+
+    if (!$response_data['ok']) {
+        throw new Exception("slack API Error: " .
+            ($response_data['error'] ?? 'Unknown error'));
+    }
+
+    return $response_data;
+}
 
 
 
@@ -336,7 +442,9 @@ $meaningOfChange = [
 
 
 
-    function compareArrays($array1, $array2) {
+function compareArrays($array1, $array2) {
+
+
     global $meaningOfChange;
     $differencesTitle = [];     // Stores the tiles for the push notifications
     $differencesMessage = [];   // Stores the body for the push notifications
@@ -397,13 +505,30 @@ function interpreteResultDataAndSendNotification($compResult, $date) {
             $title = $compResultTitle[$i];
             $message = $comResultMessage[$i];
 
-            sendPushoverNotification($title, $message, $date);
+            sendslackMessage($title, $message, $date);
         }
         return "Änderungen vorhanden";
     } else {
-        return NULL;
+        return null;
     }
+}
 
+
+
+function getBtnText($isSuccess): string {
+    if($isSuccess){
+        return '<p class="sucessful">Einstellungen erfolgreich gespeichert</p>';
+    } else {
+        return '<p class="failed">Fehler beim Speichern der Einstellungen</p>';
+    }
+}
+
+function logOut(){
+    setcookie(session_name(), '', 100);
+    session_unset();
+    session_destroy();
+    $_SESSION = array();
+    header("Location: index.php");
 }
 
 
@@ -418,22 +543,24 @@ function interpreteResultDataAndSendNotification($compResult, $date) {
 
 
 
+
+
 function connectToDatabase() {
-    $config = include('config.php');
+    $config = include 'config.php';
 
     $servername = $config['servername'];
     $username = $config['username'];
     $password = $config['password'];
     $database = $config['database'];
 
-    // Create connection
-    $conn = new mysqli($servername, $username, $password);
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
+        // Create connection
+        $conn = new mysqli($servername, $username, $password, $database);
+        if ($conn->connect_error) {
+            die("Connection failed: " . $conn->connect_error);
+        }
 
-    $conn->select_db($database);
-    return $conn;
+        //$conn->select_db($database);
+        return $conn;
 }
 
 
@@ -494,8 +621,8 @@ function writeOneArgToDatabase($input, $query) {
 }
 
 
-function writeTwoArgToDatabase($inputOne, $inputTwo, $query) {
-   /* @var $conn mysqli */
+function writeTwoArgToDatabase($returnResponse, $inputOne, $inputTwo, $query) {
+    /* @var $conn mysqli */
     global $conn;
     if (is_array($inputOne)) {
         $inputOne = json_encode($inputOne);
@@ -503,14 +630,28 @@ function writeTwoArgToDatabase($inputOne, $inputTwo, $query) {
     $stmt = $conn->prepare($query);
     $stmt->bind_param("ss", $inputOne, $inputTwo);
 
-    if ($stmt->execute()) {
-        $stmt->close();
-        return true;
+    if($returnResponse){
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if(!$result){
+            return false;
+        } else {
+            if ($result->num_rows > 0) {
+                return true;
+            } else {
+                return false;
+            }
+        }
     } else {
-        $stmt->close();
-        return false;
+        if ($stmt->execute()) {
+            $stmt->close();
+            return true;
+        } else {
+            $stmt->close();
+            return false;
+        }
     }
-    }
+}
 
 
 function writeThreeArgToDatabase($inputOne, $inputTwo, $inputThree, $query) {
@@ -569,4 +710,3 @@ function deleteDataWithOneArgFromDatabase($input, $query) {
 
     $stmt->close();
 }
-
