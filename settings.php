@@ -9,9 +9,10 @@
 
 <?php
 session_start();
-require_once "functions.php";
+require "functions.php";
 
 $username = $_SESSION['username'] ?? null;
+$password = $_SESSION['password'] ?? null;
 $conn = connectToDatabase();
 
 $slackBotToken = getColumnFromDatabase($conn, [$username], "slack_bot_token", "SELECT slack_bot_token FROM users WHERE username = ?");
@@ -65,7 +66,7 @@ if (isset($_POST['action'])) {
             }
             break;
         case 'testNotification':
-            if (sendslackMessage("Testbenachrichtigung", "Wenn du das hier liest, hast du alles richtig gemacht! Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind.", "")) {
+            if (sendslackMessage("sonstiges", "Testbenachrichtigung", "Wenn du das hier liest, hast du alles richtig gemacht! Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind.", "")) {
                 if (writeDataToDatabase($conn, [$username], "UPDATE users SET setup_complete = true WHERE username = ?")) {
                     $btnResponse = getMessageText("testNotificationSent");
                 }
