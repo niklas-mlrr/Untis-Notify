@@ -66,7 +66,7 @@ if (isset($_POST['action'])) {
             }
             break;
         case 'testNotification':
-            if (sendslackMessage("sonstiges", "Testbenachrichtigung", "Wenn du das hier liest, hast du alles richtig gemacht! Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind.", "")) {
+            if (sendslackMessage("sonstiges", "Testbenachrichtigung", "Wenn du das hier liest, hast du alles richtig gemacht! Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind. Nun kannst du die Slack App überall dort installieren und dich anmelden, wo du benachrichtigt werden möchtest (Handy, iPad, usw.).", "")) {
                 if (writeDataToDatabase($conn, [$username], "UPDATE users SET setup_complete = true WHERE username = ?")) {
                     $btnResponse = getMessageText("testNotificationSent");
                 }

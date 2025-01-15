@@ -341,11 +341,11 @@ function getFormatedTimetable($timetable) {
         $canceled = isset($timetable[$i]["code"]) ? 1 : 0;
 
         $lesson = [
+            "canceled" => $canceled,
             "lessonNum" => $startTimes[$timetable[$i]["startTime"]],
             "subject" => $timetable[$i]["su"][0]["longname"],
             "teacher" => $timetable[$i]["te"][0]["name"],
             "room" => $timetable[$i]["ro"][0]["name"],
-            "canceled" => $canceled,
         ];
         array_push($formatedTimetable, $lesson);
     }
@@ -403,7 +403,7 @@ function compareArrays($array1, $array2, $date) {
                 if ($subKey == "canceled" && $value == 0) {
                     $differencesChannel[] = "ausfall";
                     $differencesMessage[] = " ";
-                    continue;
+                    continue 2;
                 }
                 if ($subKey == "teacher" && $array2[$key][$subKey] == "---") {
                     $differencesChannel[] = "sonstiges";
@@ -444,10 +444,6 @@ function compareArrays($array1, $array2, $date) {
             $differencesMessage[] = "{$item["subject"]} bei {$item["teacher"]} in Raum {$item["room"]} ist nun mit dazugekommen";
         }
     }
-
-    print_r($differencesChannel);
-    print_r($differencesTitle);
-    print_r($differencesMessage);
 
 
 
