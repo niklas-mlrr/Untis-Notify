@@ -15,16 +15,18 @@ $password = $_POST['password'] ?? null;
 $schoolUrl = $_POST['schoolUrl'] ?? null;
 
 if ($username && $password && $schoolUrl) {
-    require "functions.php";
+    require_once "functions.php";
 
 
     $login = loginToWebUntis($username, $password, $schoolUrl);
     if ($login) {
 
         $conn = connectToDatabase();
-        $isUserInDatabase = writeTwoArgToDatabase(true, $username, $password, "SELECT * FROM users WHERE username = ? AND password = ?");;
+
+        $isUserInDatabase = getRowsFromDatabase($conn, [$username, $password], "SELECT * FROM users WHERE username = ? AND password = ?") > 0;
+
         if (!$isUserInDatabase) {
-            writeThreeArgToDatabase($username, $password, $schoolUrl, "INSERT INTO users (username, password, school_url) VALUES (?, ?, ?)");
+            writeDataToDatabase($conn, [$username, $password, $schoolUrl], "INSERT INTO users (username, password, school_url) VALUES (?, ?, ?)");
         }
 
         $_SESSION['username'] = $username;
@@ -33,12 +35,11 @@ if ($username && $password && $schoolUrl) {
         $_SESSION['schoolUrl'] = $schoolUrl;
 
 
-        $loginMessage = '<p class="successful">Erfolgreich regestriert</p>';
         $conn->close();
         header("Location: settings.php");
         exit();
     } else {
-        $loginMessage = '<p class="failed">Fehler beim Einloggen</p>';
+        $loginMessage = getMessageText("loginFailed");
     }
 } else {
     $loginMessage = '';
@@ -57,14 +58,15 @@ if ($username && $password && $schoolUrl) {
     <form action="index.php" method="post">
         <h2>Untis Notify</h2>
         <h4>- Benachrichtigungen für Untis -</h4>
-
+        <p class="info-text">Die Einrichtung der Benachrichtigungen braucht einmalig ca. 10 Min. und ein Handy & Pc / Laptop</p>
+        <br>
 
         <label for="schoolUrl">Schul-URL:</label>
         <div class="label-container">
             <input type="text" id="schoolUrl" name="schoolUrl" placeholder="https://niobe.webuntis.com/WebUntis/jsonrpc.do?school=gym-osterode">
             <span class="info-icon" onclick="toggleInfo('info-schoolUrl')">?</span>
         </div>
-        <div class="info-field" id="info-schoolUrl">Hier muss nichts eingegeben werden, wenn du auf dem TRG bist.</div>
+        <div class="info-field" id="info-schoolUrl">Wenn du auf dem TRG bist, muss hier nichts eingegeben werden.</div>
         <br>
 
         <label for="username">Untis Benutzername:</label>

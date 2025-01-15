@@ -5,11 +5,11 @@ function initiateCheck() {
     global $username, $password, $conn;
 
     $conn = connectToDatabase();
-    $setupComplete = getDataWithOneArgFromDatabase($username, "setup_complete", "SELECT setup_complete FROM users where username  = ?");
+    $setupComplete = getColumnFromDatabase($conn, [$username], "setup_complete", "SELECT setup_complete FROM users where username  = ?");
     if (!$setupComplete) {
         return;
     }
-    $schoolUrl = getDataWithOneArgFromDatabase($username, "school_url", "SELECT school_url FROM users where username  = ?");
+    $schoolUrl = getColumnFromDatabase($conn, [$username], "school_url", "SELECT school_url FROM users where username  = ?");
     $login = loginToWebUntis($username, $password, $schoolUrl);
     if ($login) {
 
@@ -17,14 +17,14 @@ function initiateCheck() {
         $students = getStudents($login);
 
         $currentDate = date("Ymd");
-        deleteDataWithOneArgFromDatabase($currentDate, "DELETE FROM timetables WHERE for_Date < ?");
+        writeDataToDatabase($conn, [$currentDate], "DELETE FROM timetables WHERE for_Date < ?");
 
 
         // for each user:
 
 
         $userId = getStudentIdByName($students, $username);
-        $notificationForDaysInAdvance = getDataWithOneArgFromDatabase($username, "notification_for_days_in_advance", "SELECT notification_for_days_in_advance FROM users where username  = ?");
+        $notificationForDaysInAdvance = getColumnFromDatabase($conn, [$username], "notification_for_days_in_advance", "SELECT notification_for_days_in_advance FROM users where username  = ?");
 
 
         for ($i = 0; $i < $notificationForDaysInAdvance; $i++) {
@@ -33,8 +33,9 @@ function initiateCheck() {
             $timetable = getTimetable($login, $userId, $date);
             $formatedTimetable = getFormatedTimetable($timetable);
 
-            $lastRetrieval = getDataWithTwoArgFromDatabase($date, $username, "timetableData", "SELECT timetableData FROM timetables where for_Date  = ? AND user = ?");
-
+            
+            $lastRetrieval = getColumnFromDatabase($conn, [$date, $username], "timetableData", "SELECT timetableData FROM timetables where for_Date  = ? AND user = ?");
+            
             if($lastRetrieval){
                 $lastRetrieval = json_decode($lastRetrieval, true);
             }
@@ -42,7 +43,7 @@ function initiateCheck() {
 
 
             if (!$lastRetrieval && $formatedTimetable != NULL) {
-                writeThreeArgToDatabase($formatedTimetable, $date, $username, "INSERT INTO timetables (timetableData, for_Date, user) VALUES (?, ?, ?)");
+                writeDataToDatabase($conn, [$formatedTimetable, $date, $username], "INSERT INTO timetables (timetableData, for_Date, user) VALUES (?, ?, ?)");
                 continue;
             } else if (!$lastRetrieval && $formatedTimetable == NULL) {
                 continue;
@@ -54,7 +55,7 @@ function initiateCheck() {
 
 
             if ($result) {
-                writeThreeArgToDatabase($formatedTimetable, $date, $username, "UPDATE timetables SET timetableData = ?, for_Date = ?, user = ? WHERE for_Date = $date");
+                writeDataToDatabase($conn, [$formatedTimetable, $date, $username], "UPDATE timetables SET timetableData = ?, for_Date = ?, user = ? WHERE for_Date = $date");
             }
         }
 
@@ -74,15 +75,13 @@ function initiateCheck() {
  * @param string $message The message to send
  * @param string $channel The channel to send the message to (e.g. "#general")
  * @param string $bot_token Your slack bot user OAuth token
- * @return array Response from slack API
- * @throws Exception If the API request fails
  */
 function sendslackMessage($title, $message, $date) {
-    global $username;
+    global $username, $conn;
     $url = 'https://slack.com/api/chat.postMessage';
 
 
-    $botToken = getDataWithOneArgFromDatabase($username, "slack_bot_token", "SELECT slack_bot_token FROM users where username  = ?");
+    $botToken = getColumnFromDatabase($conn, [$username], "slack_bot_token", "SELECT slack_bot_token FROM users where username  = ?");
 
 
     switch ($date) {
@@ -149,25 +148,18 @@ function sendslackMessage($title, $message, $date) {
 
     if ($error) {
         curl_close($ch);
-        throw new Exception("cURL Error: $error");
+        return false;
     }
 
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-
     $response_data = json_decode($response, true);
 
-    if ($http_code !== 200) {
-        throw new Exception("HTTP Error: $http_code - " .
-            ($response_data['error'] ?? 'Unknown error'));
+    if ($http_code !== 200 || !$response_data['ok']) {
+        return false;
     }
 
-    if (!$response_data['ok']) {
-        throw new Exception("slack API Error: " .
-            ($response_data['error'] ?? 'Unknown error'));
-    }
-
-    return $response_data;
+    return true;
 }
 
 
@@ -186,8 +178,8 @@ function sendPushoverNotification($title, $message, $date) {
     global $username;
 
     $conn = connectToDatabase();
-    $token = getDataWithOneArgFromDatabase($username, "pushover_api_key", "SELECT pushover_api_key FROM users where username  = ?");
-    $user = getDataWithOneArgFromDatabase($username, "pushover_user_key", "SELECT pushover_user_key FROM users where username  = ?");
+    $token = getColumnFromDatabase($conn, [$username], "pushover_api_key", "SELECT pushover_api_key FROM users where username  = ?");
+    $user = getColumnFromDatabase($conn, [$username], "pushover_user_key", "SELECT pushover_user_key FROM users where username  = ?");
     $conn->close();
 
 
@@ -515,13 +507,31 @@ function interpreteResultDataAndSendNotification($compResult, $date) {
 
 
 
-function getBtnText($isSuccess): string {
-    if($isSuccess){
-        return '<p class="sucessful">Einstellungen erfolgreich gespeichert</p>';
-    } else {
-        return '<p class="failed">Fehler beim Speichern der Einstellungen</p>';
+function getMessageText($case) {
+    switch ($case) {
+        case "loginFailed":
+            return '<p class="failed">Fehler beim Einloggen</p>';
+
+        case "settingsSavedSuccessfully":
+            return '<p class="successful">Einstellungen erfolgreich gespeichert</p>';
+        case "settingsNotSaved":
+            return '<p class="failed">Fehler beim Speichern der Einstellungen</p>';
+
+        case "accountDeletedSuccessfully":
+            return '<p class="successful">Konto erfolgreich gelöscht</p>';
+        case "accountNotDeleted":
+            return '<p class="failed">Fehler beim Löschen des Kontos</p>';
+
+        case "testNotificationSent":
+            return '<p class="successful">Testbenachrichtigung erfolgreich gesendet</p>';
+        case "testNotificationNotSent":
+            return '<p class="failed">Fehler beim Senden der Testbenachrichtigung</p>';
+
+        default:
+            return "";
     }
 }
+    
 
 function logOut(){
     setcookie(session_name(), '', 100);
@@ -545,7 +555,7 @@ function logOut(){
 
 
 
-function connectToDatabase() {
+function connectToDatabase(): mysqli {
     $config = include 'config.php';
 
     $servername = $config['servername'];
@@ -553,140 +563,63 @@ function connectToDatabase() {
     $password = $config['password'];
     $database = $config['database'];
 
-        // Create connection
-        $conn = new mysqli($servername, $username, $password, $database);
-        if ($conn->connect_error) {
-            die("Connection failed: " . $conn->connect_error);
-        }
+    // Create connection
+    $conn = new mysqli($servername, $username, $password, $database);
+    if ($conn->connect_error) {
+        throw new Exception("Connection failed: " . $conn->connect_error);
+    }
 
-        //$conn->select_db($database);
-        return $conn;
+    return $conn;
 }
 
-
-
-
-
-function getDataWithOneArgFromDatabase($input, $dataFromRow, $query) {
-    global $conn;
-
+function getRowsFromDatabase(mysqli $conn, array $inputs, string $query): bool {
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("s", $input);
-    
+    if (!$stmt) {
+        throw new Exception("Prepare failed: " . $conn->error);
+    }
+
+    $types = str_repeat('s', count($inputs));
+    $stmt->bind_param($types, ...$inputs);
+
     $stmt->execute();
     $result = $stmt->get_result();
 
-     if ($result->num_rows > 0) {
-         while ($row = $result->fetch_assoc()) {
-             return $row[$dataFromRow];
-         }
-     }
+    return $result->num_rows > 0;
 }
 
-
-function getDataWithTwoArgFromDatabase($inputOne, $inputTwo, $dataFromRow, $query) {
-    global $conn;
-
+function getColumnFromDatabase(mysqli $conn, array $inputs, string $dataFromColumn, string $query): ?string {
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("ss", $inputOne, $inputTwo);
+    if (!$stmt) {
+        throw new Exception("Prepare failed: " . $conn->error);
+    }
+
+    $types = str_repeat('s', count($inputs));
+    $stmt->bind_param($types, ...$inputs);
 
     $stmt->execute();
     $result = $stmt->get_result();
 
     if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            return $row[$dataFromRow];
-        }
+        $row = $result->fetch_assoc();
+        return $row[$dataFromColumn] ?? null;
     }
+    return null;
 }
 
-
-
-function writeOneArgToDatabase($input, $query) {
-    global $conn;
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("s", $input);
-
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if(!$result){
-        return false;
-    } else {
-        if ($result->num_rows > 0) {
-            return true;
-        } else {
-            return false;
+function writeDataToDatabase(mysqli $conn, array $inputs, string $query): bool {
+    foreach ($inputs as &$input) {
+        if (is_array($input)) {
+            $input = json_encode($input);
         }
     }
-}
 
-
-function writeTwoArgToDatabase($returnResponse, $inputOne, $inputTwo, $query) {
-    /* @var $conn mysqli */
-    global $conn;
-    if (is_array($inputOne)) {
-        $inputOne = json_encode($inputOne);
-    }
+    $types = str_repeat('s', count($inputs));
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("ss", $inputOne, $inputTwo);
-
-    if($returnResponse){
-        $stmt->execute();
-        $result = $stmt->get_result();
-        if(!$result){
-            return false;
-        } else {
-            if ($result->num_rows > 0) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-    } else {
-        if ($stmt->execute()) {
-            $stmt->close();
-            return true;
-        } else {
-            $stmt->close();
-            return false;
-        }
-    }
-}
-
-
-function writeThreeArgToDatabase($inputOne, $inputTwo, $inputThree, $query) {
-    /* @var $conn mysqli */
-    global $conn;
-
-    if (is_array($inputOne)) {
-        $inputOne = json_encode($inputOne);
-    }
-    if (is_array($inputTwo)) {
-        $inputTwo = json_encode($inputTwo);
-    }
-    if (is_array($inputThree)) {
-        $inputThree = json_encode($inputThree);
+    if (!$stmt) {
+        throw new Exception("Prepare failed: " . $conn->error);
     }
 
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("sss", $inputOne, $inputTwo, $inputThree);
-
-    if ($stmt->execute()) {
-        $stmt->close();
-        return true;
-    } else {
-        $stmt->close();
-        return false;
-    }
-    }
-
-function writeFourArgToDatabase($inputOne, $inputTwo, $inputThree, $inputFour, $query) {
-    /* @var $conn mysqli */
-    global $conn;
-
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("ssss", $inputOne, $inputTwo, $inputThree, $inputFour);
-
+    $stmt->bind_param($types, ...$inputs);
 
     if ($stmt->execute()) {
         $stmt->close();
@@ -698,15 +631,4 @@ function writeFourArgToDatabase($inputOne, $inputTwo, $inputThree, $inputFour, $
 }
 
 
-function deleteDataWithOneArgFromDatabase($input, $query) {
-    global $conn;
 
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("s", $input);
-
-    if (!$stmt->execute()) {
-        echo "Error: " . $stmt->error;
-    }
-
-    $stmt->close();
-}
