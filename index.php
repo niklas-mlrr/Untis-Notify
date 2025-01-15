@@ -15,7 +15,7 @@ $password = $_POST['password'] ?? null;
 $schoolUrl = $_POST['schoolUrl'] ?? null;
 
 if ($username && $password && $schoolUrl) {
-    require_once "functions.php";
+    require "functions.php";
 
 
     $login = loginToWebUntis($username, $password, $schoolUrl);
@@ -58,7 +58,7 @@ if ($username && $password && $schoolUrl) {
     <form action="index.php" method="post">
         <h2>Untis Notify</h2>
         <h4>- Benachrichtigungen für Untis -</h4>
-        <p class="info-text">Die Einrichtung der Benachrichtigungen braucht einmalig ca. 10 Min. und ein Handy & Pc / Laptop</p>
+        <p class="info-text">Die Einrichtung dauert einmalig ca. 15 Min. und benötigt ein Handy & Pc / Laptop</p>
         <br>
 
         <label for="schoolUrl">Schul-URL:</label>

@@ -1,67 +1,65 @@
 <?php
 
 
+
+
+
+
 function initiateCheck() {
     global $username, $password, $conn;
 
     $conn = connectToDatabase();
     $setupComplete = getColumnFromDatabase($conn, [$username], "setup_complete", "SELECT setup_complete FROM users where username  = ?");
-    if (!$setupComplete) {
-        return;
-    }
+
     $schoolUrl = getColumnFromDatabase($conn, [$username], "school_url", "SELECT school_url FROM users where username  = ?");
     $login = loginToWebUntis($username, $password, $schoolUrl);
-    if ($login) {
 
-
-        $students = getStudents($login);
-
-        $currentDate = date("Ymd");
-        writeDataToDatabase($conn, [$currentDate], "DELETE FROM timetables WHERE for_Date < ?");
-
-
-        // for each user:
-
-
-        $userId = getStudentIdByName($students, $username);
-        $notificationForDaysInAdvance = getColumnFromDatabase($conn, [$username], "notification_for_days_in_advance", "SELECT notification_for_days_in_advance FROM users where username  = ?");
-
-
-        for ($i = 0; $i < $notificationForDaysInAdvance; $i++) {
-            $date = date("Ymd", strtotime("+$i days"));
-
-            $timetable = getTimetable($login, $userId, $date);
-            $formatedTimetable = getFormatedTimetable($timetable);
-
-            
-            $lastRetrieval = getColumnFromDatabase($conn, [$date, $username], "timetableData", "SELECT timetableData FROM timetables where for_Date  = ? AND user = ?");
-            
-            if($lastRetrieval){
-                $lastRetrieval = json_decode($lastRetrieval, true);
-            }
-
-
-
-            if (!$lastRetrieval && $formatedTimetable != NULL) {
-                writeDataToDatabase($conn, [$formatedTimetable, $date, $username], "INSERT INTO timetables (timetableData, for_Date, user) VALUES (?, ?, ?)");
-                continue;
-            } else if (!$lastRetrieval && $formatedTimetable == NULL) {
-                continue;
-            }
-
-
-            $compResult = compareArrays($lastRetrieval, $formatedTimetable);
-            $result = interpreteResultDataAndSendNotification($compResult, $date);
-
-
-            if ($result) {
-                writeDataToDatabase($conn, [$formatedTimetable, $date, $username], "UPDATE timetables SET timetableData = ?, for_Date = ?, user = ? WHERE for_Date = $date");
-            }
-        }
-
-        $conn->close();
+    if (!$setupComplete || !$login) {
+        return;
     }
 
+    $students = getStudents($login);
+
+    $currentDate = date("Ymd");
+    writeDataToDatabase($conn, [$currentDate], "DELETE FROM timetables WHERE for_Date < ?");    // Delete old timetables
+
+
+    // for each user:
+
+
+    $userId = getStudentIdByName($students, $username);
+    $notificationForDaysInAdvance = getColumnFromDatabase($conn, [$username], "notification_for_days_in_advance", "SELECT notification_for_days_in_advance FROM users where username  = ?");
+
+    for ($i = 0; $i < $notificationForDaysInAdvance; $i++) {
+        $date = date("Ymd", strtotime("+$i days"));
+
+        $timetable = getTimetable($login, $userId, $date);
+        $formatedTimetable = getFormatedTimetable($timetable);
+
+
+        $lastRetrieval = getColumnFromDatabase($conn, [$date, $username], "timetableData", "SELECT timetableData FROM timetables where for_Date  = ? AND user = ?");
+        if($lastRetrieval){
+            $lastRetrieval = json_decode($lastRetrieval, true);
+        }
+
+
+        if (!$lastRetrieval && $formatedTimetable != NULL) {
+            writeDataToDatabase($conn, [$formatedTimetable, $date, $username], "INSERT INTO timetables (timetableData, for_Date, user) VALUES (?, ?, ?)");
+            continue;
+        } else if (!$lastRetrieval && $formatedTimetable == NULL) {
+            continue;
+        }
+
+
+        $compResult = compareArrays($lastRetrieval, $formatedTimetable, $date);
+
+
+
+        if ($compResult) {  // Update the database with the new timetable
+            writeDataToDatabase($conn, [$formatedTimetable, $date, $username], "UPDATE timetables SET timetableData = ?, for_Date = ?, user = ? WHERE for_Date = $date");
+        }
+    }
+    $conn->close();
 }
 
 
@@ -71,17 +69,18 @@ function initiateCheck() {
 
 /**
  * Sends a message to a slack channel using the slack Web API
- *
+ * @param string $channel The channel to send the message to (e.g. "#general")
  * @param string $message The message to send
  * @param string $channel The channel to send the message to (e.g. "#general")
  * @param string $bot_token Your slack bot user OAuth token
  */
-function sendslackMessage($title, $message, $date) {
+function sendslackMessage($channel, $title, $message, $date) {
     global $username, $conn;
     $url = 'https://slack.com/api/chat.postMessage';
 
 
     $botToken = getColumnFromDatabase($conn, [$username], "slack_bot_token", "SELECT slack_bot_token FROM users where username  = ?");
+
 
 
     switch ($date) {
@@ -101,7 +100,7 @@ function sendslackMessage($title, $message, $date) {
 
     // Prepare the payload
     $payload = array(
-        'channel' => "untis-notify",
+        'channel' => $channel,
         "blocks" => [
     [
         "type" => "section",
@@ -122,7 +121,7 @@ function sendslackMessage($title, $message, $date) {
         "type" => "section",
         "text" => [
             "type" => "mrkdwn",
-            "text" => "*$message*"
+            "text" => "$message"
         ]
     ],
     [
@@ -154,6 +153,7 @@ function sendslackMessage($title, $message, $date) {
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
     $response_data = json_decode($response, true);
+    //print_r($response_data);
 
     if ($http_code !== 200 || !$response_data['ok']) {
         return false;
@@ -170,66 +170,15 @@ function sendslackMessage($title, $message, $date) {
 
 
 
-
-
-
-
-function sendPushoverNotification($title, $message, $date) {
-    global $username;
-
-    $conn = connectToDatabase();
-    $token = getColumnFromDatabase($conn, [$username], "pushover_api_key", "SELECT pushover_api_key FROM users where username  = ?");
-    $user = getColumnFromDatabase($conn, [$username], "pushover_user_key", "SELECT pushover_user_key FROM users where username  = ?");
-    $conn->close();
-
-
-    switch ($date) {
-        case date("Ymd"):
-            $date = "Heute: ";
-            break;
-        case date("Ymd", strtotime("+1 days")):
-            $date = "Morgen: ";
-            break;
-        case date("Ymd", strtotime("+2 days")):
-            $date = "Übermorgen: ";
-            break;
-        default:
-            $date = $date ? date("d.m", strtotime($date)) . ": " : "";
-    }
-
-
-
-    $data = array(
-        "token" => $token,
-        "user" => $user,
-        "title" => $date . $title,
-        "message" => $message,
-        "url" => "shortcuts://run-shortcut?name=untis",
-        "url_title" => "Untis öffnen"
-    );
-
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, "https://api.pushover.net/1/messages.json");
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-    $response = curl_exec($ch);
-    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-
-
-return $status == 200 ? true : false;
-
-}
-
-
-
-
-
-
-function loginToWebUntis($username, $password, $schoolUrl) {
+/**
+ * Logs into the WebUntis API and returns the session ID
+ *
+ * @param string $username The username to log in with
+ * @param string $password The password to log in with
+ * @param string $schoolUrl The URL of the school
+ * @return string The session ID
+ */
+function loginToWebUntis(string $username, string $password, string $schoolUrl): string {
 
     $loginPayload = [
         "id" => "login",
@@ -252,18 +201,16 @@ function loginToWebUntis($username, $password, $schoolUrl) {
     curl_close($ch);
 
     if (isset($result['result']['sessionId'])) {
-        // Session-ID speichern und zurückgeben
         return $result['result']['sessionId'];
-    } else {
-        //throw new Exception("Login fehlgeschlagen: " . $response);
     }
+    return "";
 }
 
-
-
-
-
-
+/**
+ * @param $sessionId
+ * @param $payload
+ * @return mixed
+ */
 function sendApiRequest($sessionId, $payload) {
     $url = "https://niobe.webuntis.com/WebUntis/jsonrpc.do?school=gym-osterode";
     $ch = curl_init($url);
@@ -291,12 +238,12 @@ function sendApiRequest($sessionId, $payload) {
 }
 
 
-
-
-
-
-
-
+/**
+ * @param $sessionId
+ * @param $userId
+ * @param $date
+ * @return mixed
+ */
 function getTimetable($sessionId, $userId, $date) {
     $payload = [
         "id" => "getTimetable",
@@ -328,7 +275,10 @@ function getTimetable($sessionId, $userId, $date) {
 }
 
 
-
+/**
+ * @param $sessionId
+ * @return mixed
+ */
 function getStudents($sessionId) {
     $payload = [
         "id" => "getStudents",
@@ -340,7 +290,11 @@ function getStudents($sessionId) {
 }
 
 
-
+/**
+ * @param $studentArray
+ * @param $name
+ * @return mixed|null
+ */
 function getStudentIdByName($studentArray, $name) {
     foreach ($studentArray as $student) {
         if ($student['name'] === $name) {
@@ -348,21 +302,6 @@ function getStudentIdByName($studentArray, $name) {
         }
     }
     return null;
-}
-
-
-
-
-
-
-function getCurrentSchoolYear($sessionId) {
-    $payload = [
-        "id" => "getCurrentSchoolyear",
-        "method" => "getCurrentSchoolyear",
-        "params" => [],
-        "jsonrpc" => "2.0"
-    ];
-    return sendApiRequest($sessionId, $payload);
 }
 
 
@@ -385,6 +324,12 @@ $startTimes = [
 function cmp($a, $b) {
     return $a['lessonNum'] - $b['lessonNum'];
 }
+
+
+/**
+ * @param $timetable
+ * @return array
+ */
 function getFormatedTimetable($timetable) {
     global $startTimes;
     $numOfLessons = count($timetable);
@@ -407,8 +352,6 @@ function getFormatedTimetable($timetable) {
 
 
     // Sort by lessonNum
-
-
     usort($formatedTimetable,"cmp");
 
     return $formatedTimetable;
@@ -421,92 +364,127 @@ function getFormatedTimetable($timetable) {
 
 
 
-$meaningOfChange = [
-    "lessonNum" => "Verlegt (Änderung bei lessonNum)",
-    "subject" => "Fachwechsel",
-    "teacher" => "Vertretung",
-    "room" => "Raumänderung",
-    "canceled" => ""
-];
 
 
+/**
+ * @param $array1
+ * @param $array2
+ * @return array|string
+ */
+function compareArrays($array1, $array2, $date) {
 
-
-
-
-function compareArrays($array1, $array2) {
-
-
-    global $meaningOfChange;
-    $differencesTitle = [];     // Stores the tiles for the push notifications
-    $differencesMessage = [];   // Stores the body for the push notifications
+    $differencesChannel = [];
+    $differencesTitle = [];
+    $differencesMessage = [];
 
     // Vergleiche alle Elemente des ersten Arrays
     foreach ($array1 as $key => $item) {
         // Wenn der Index im zweiten Array nicht existiert, markiere dies
         if (!isset($array2[$key])) {
-            $differencesTitle[] = "{$item["lessonNum"]}. Stunde {$item["subject"]} fehlt nun komplett"; 	//(...  im zweiten Array)
-            $differencesMessage[] = "";
+            $differencesChannel[] = "sonstiges";
+            $differencesTitle[] = "{$item["lessonNum"]}. Stunde {$item["subject"]} fehlt nun komplett";    //(...  im zweiten Array)
             continue;
         }
 
         // Vergleiche die einzelnen Werte
         foreach ($item as $subKey => $value) {
             if (!isset($array2[$key][$subKey])) {
+                $differencesChannel[] = "sonstiges";
                 $differencesTitle[] = "Schlüssel '$subKey'" . " fehlt in Array 2 bei Index $key";
-                $differencesMessage[] = ".";
             }
-            elseif ($array2[$key][$subKey] !== $value) {
-                $differencesTitle[] = "{$item["lessonNum"]}. Stunde {$item["subject"]} $meaningOfChange[$subKey]";
-                if ($subKey == "canceled" && $item[$subKey] == 0) {
-                    $differencesMessage[] = "Ausfall";
-                } elseif($item[$subKey] == 1) {
+
+            if ($array2[$key][$subKey] !== $value) {        // Wird ausgeführt, wenn ein Wert unterschiedlich ist
+                $differencesTitle[] = "{$item["lessonNum"]}. Stunde {$item["subject"]}";   // z.B. 1. Stunde Mathe
+                if ($subKey == "canceled" && $value == 1) {
+                    $differencesChannel[] = "sonstiges";
                     $differencesMessage[] = "Jetzt kein Ausfall mehr";
-                }elseif($subKey == "teacher" && $array2[$key][$subKey] == "---") {
-                    $differencesMessage[] = "Lehrer Ausgetragen (Vorher: $value)";
-                } else {
+                    continue;
+                }
+                if ($subKey == "canceled" && $value == 0) {
+                    $differencesChannel[] = "ausfall";
+                    $differencesMessage[] = " ";
+                    continue;
+                }
+                if ($subKey == "teacher" && $array2[$key][$subKey] == "---") {
+                    $differencesChannel[] = "sonstiges";
+                    $differencesMessage[] = "Lehrer ausgetragen (Vorher: $value)";
+                    continue;
+                } elseif ($subKey == "teacher") {
+                    $differencesChannel[] = "vertretung";
                     $differencesMessage[] = "Vorher: $value; Jetzt: {$array2[$key][$subKey]}";
+                    continue;
+                }
+                if ($subKey == "room" && $array2[$key][$subKey] == "---") {
+                    $differencesChannel[] = "sonstiges";
+                    $differencesMessage[] = "Raum ausgetragen (Vorher: $value)";
+                    continue;
+                } elseif ($subKey == "room") {
+                    $differencesChannel[] = "raumänderung";
+                    $differencesMessage[] = "Vorher: $value; Jetzt: {$array2[$key][$subKey]}";
+                    continue;
+                }
+                if ($subKey == "subject" && $array2[$key][$subKey] == "---") {
+                    $differencesChannel[] = "sonstiges";
+                    $differencesMessage[] = "Fach ausgetragen (Vorher: $value)";
+                    continue;
+                } elseif ($subKey == "subject") {
+                    $differencesChannel[] = "sonstiges";
+                    $differencesMessage[] = "Fachwechsel; Vorher: $value; Jetzt: {$array2[$key][$subKey]}";
+                    continue;
+                }
                 }
             }
         }
-    }
+
 
     // Prüfe auch das zweite Array auf zusätzliche Indizes
     foreach ($array2 as $key => $item) {
         if (!isset($array1[$key])) {
-            $differencesTitle[] = "{$item["lessonNum"]}. Stunde: Neues Fach";
+            $differencesChannel[] = "{$item["lessonNum"]}. Stunde: Neues Fach";
             $differencesMessage[] = "{$item["subject"]} bei {$item["teacher"]} in Raum {$item["room"]} ist nun mit dazugekommen";
         }
     }
 
-
-    $result = array_merge($differencesTitle, $differencesMessage);
-    return empty($result) ? "Arrays sind identisch" : $result;
-
-}
+    print_r($differencesChannel);
+    print_r($differencesTitle);
+    print_r($differencesMessage);
 
 
-function interpreteResultDataAndSendNotification($compResult, $date) {
-    if ($compResult != "Arrays sind identisch") {
-        $comResultLen = count($compResult);
-        $compResultTitle = array_slice($compResult, 0, intval($comResultLen / 2));
-        $comResultMessage = array_slice($compResult, intval($comResultLen / 2));
 
+    for ($i = 0; $i < count($differencesChannel); $i++) {
+        $chanel = $differencesChannel[$i];
+        $title = $differencesTitle[$i];
+        $message = $differencesMessage[$i];
 
-        for ($i = 0; $i < count($compResultTitle); $i++) {
-            $title = $compResultTitle[$i];
-            $message = $comResultMessage[$i];
-
-            sendslackMessage($title, $message, $date);
-        }
-        return "Änderungen vorhanden";
-    } else {
-        return null;
+        sendslackMessage($chanel, $title, $message, $date);
     }
+
+    if (empty($differencesChannel)) {
+        return false;
+    }
+    return "Änderungen vorhanden";
+
+
 }
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * @param $case
+ * @return string
+ */
 function getMessageText($case) {
     switch ($case) {
         case "loginFailed":
@@ -531,8 +509,11 @@ function getMessageText($case) {
             return "";
     }
 }
-    
 
+
+/**
+ * @return void
+ */
 function logOut(){
     setcookie(session_name(), '', 100);
     session_unset();
@@ -542,19 +523,9 @@ function logOut(){
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+/**
+ * @return mysqli
+ */
 function connectToDatabase(): mysqli {
     $config = include 'config.php';
 
@@ -572,6 +543,13 @@ function connectToDatabase(): mysqli {
     return $conn;
 }
 
+
+/**
+ * @param mysqli $conn
+ * @param array $inputs
+ * @param string $query
+ * @return bool
+ */
 function getRowsFromDatabase(mysqli $conn, array $inputs, string $query): bool {
     $stmt = $conn->prepare($query);
     if (!$stmt) {
@@ -587,6 +565,14 @@ function getRowsFromDatabase(mysqli $conn, array $inputs, string $query): bool {
     return $result->num_rows > 0;
 }
 
+
+/**
+ * @param mysqli $conn
+ * @param array $inputs
+ * @param string $dataFromColumn
+ * @param string $query
+ * @return string|null
+ */
 function getColumnFromDatabase(mysqli $conn, array $inputs, string $dataFromColumn, string $query): ?string {
     $stmt = $conn->prepare($query);
     if (!$stmt) {
@@ -606,6 +592,13 @@ function getColumnFromDatabase(mysqli $conn, array $inputs, string $dataFromColu
     return null;
 }
 
+
+/**
+ * @param mysqli $conn
+ * @param array $inputs
+ * @param string $query
+ * @return bool
+ */
 function writeDataToDatabase(mysqli $conn, array $inputs, string $query): bool {
     foreach ($inputs as &$input) {
         if (is_array($input)) {
