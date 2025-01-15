@@ -177,3 +177,8 @@ button {
     }
 
 }
+
+.info-text {
+    font-size: 12px;
+    color: rgb(100,100,100);
+}
