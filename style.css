@@ -137,7 +137,7 @@ button {
 
 .img-div {
     position: fixed;
-    top: -5px;
+    top: -3px;
     left: 50%;
     transform: translateX(-50%);
     display: block;
@@ -148,14 +148,14 @@ button {
     position: fixed;
     left: 50%;
     transform: translateX(-50%);
-    max-width: 380px;
+    max-width: 360px;
     height: auto;
     z-index: 100;
 }
 
 .notification-text {
     position: fixed;
-    top: 72px;
+    top: 70px;
     padding: 10px;
     border-radius: 5px;
     margin-top: 10px;
