@@ -3,8 +3,6 @@
 
 
 
-
-
 function initiateCheck() {
     global $username, $password, $conn;
 
@@ -335,17 +333,17 @@ function getFormatedTimetable($timetable) {
     $numOfLessons = count($timetable);
     $formatedTimetable = [];
 
-
     for($i = 0; $i < $numOfLessons; $i++){
 
         $canceled = isset($timetable[$i]["code"]) ? 1 : 0;
 
+
         $lesson = [
             "canceled" => $canceled,
-            "lessonNum" => $startTimes[$timetable[$i]["startTime"]],
-            "subject" => $timetable[$i]["su"][0]["longname"],
-            "teacher" => $timetable[$i]["te"][0]["name"],
-            "room" => $timetable[$i]["ro"][0]["name"],
+            "lessonNum" => isset($startTimes[$timetable[$i]["startTime"]]) ? $startTimes[$timetable[$i]["startTime"]] : null,
+            "subject" => isset($timetable[$i]["su"][0]["longname"]) ? $timetable[$i]["su"][0]["longname"] : null,
+            "teacher" => isset($timetable[$i]["te"][0]["name"]) ? $timetable[$i]["te"][0]["name"] : null,
+            "room" => isset($timetable[$i]["ro"][0]["name"]) ? $timetable[$i]["ro"][0]["name"] : null,
         ];
         array_push($formatedTimetable, $lesson);
     }
@@ -383,14 +381,19 @@ function compareArrays($array1, $array2, $date) {
         if (!isset($array2[$key])) {
             $differencesChannel[] = "sonstiges";
             $differencesTitle[] = "{$item["lessonNum"]}. Stunde {$item["subject"]} fehlt nun komplett";    //(...  im zweiten Array)
+            $differencesMessage[] = " ";
             continue;
         }
 
         // Vergleiche die einzelnen Werte
         foreach ($item as $subKey => $value) {
+            if(isset($array1[$key][$subKey])){
+                echo "key: $key, subkey: $subKey, value: $value";
+            }
             if (!isset($array2[$key][$subKey])) {
                 $differencesChannel[] = "sonstiges";
-                $differencesTitle[] = "Schlüssel '$subKey'" . " fehlt in Array 2 bei Index $key";
+                $differencesTitle[] = "Eigenschaft \"$subKey\" fehlt in der {$item["lessonNum"]}. Stunde";
+                $differencesMessage[] = " ";
             }
 
             if ($array2[$key][$subKey] !== $value) {        // Wird ausgeführt, wenn ein Wert unterschiedlich ist
@@ -496,10 +499,20 @@ function getMessageText($case) {
         case "accountNotDeleted":
             return '<p class="failed">Fehler beim Löschen des Kontos</p>';
 
-        case "testNotificationSent":
-            return '<p class="successful">Testbenachrichtigung erfolgreich gesendet</p>';
-        case "testNotificationNotSent":
-            return '<p class="failed">Fehler beim Senden der Testbenachrichtigung</p>';
+        case "testNotificationAllSent":
+            return '<p class="successful">Alle Testbenachrichtigungen erfolgreich gesendet</p>';
+        case "testNotificationAllNotSent":
+            return '<p class="failed">Fehler beim Senden aller Testbenachrichtigungen</p>';
+        case "testNotificationAusfallNotSent":
+            return '<p class="failed">Fehler beim Senden der Testbenachrichtigung für den Channel ausfall</p>';
+        case "testNotificationRaumänderungNotSent":
+            return '<p class="failed">Fehler beim Senden der Testbenachrichtigung für den Channel raumänderung</p>';
+        case "testNotificationVertretungNotSent":
+            return '<p class="failed">Fehler beim Senden der Testbenachrichtigung für den Channel vertretung</p>';
+        case "test NotificationSonstigesNotSent":
+            return '<p class="failed">Fehler beim Senden der Testbenachrichtigung für den Channel sonstiges</p>';
+
+
 
         default:
             return "";

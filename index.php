@@ -46,6 +46,9 @@ if ($username && $password && $schoolUrl) {
 }
 ?>
 
+
+
+
 <div class="img-div">
     <img class="notification-img" src="notification example.png" alt="Notification Example">
 </div>
@@ -54,6 +57,10 @@ if ($username && $password && $schoolUrl) {
 
 
 <div class="parent">
+
+    <button id="toggle-theme">
+        <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
+    </button>
 
     <form action="index.php" method="post">
         <h2>Untis Notify</h2>
@@ -66,7 +73,7 @@ if ($username && $password && $schoolUrl) {
             <input type="text" id="schoolUrl" name="schoolUrl" placeholder="https://niobe.webuntis.com/WebUntis/jsonrpc.do?school=gym-osterode">
             <span class="info-icon" onclick="toggleInfo('info-schoolUrl')">?</span>
         </div>
-        <div class="info-field" id="info-schoolUrl">Wenn du auf dem TRG bist, muss hier nichts eingegeben werden.</div>
+        <div class="info-field" id="info-schoolUrl">Wenn du auf dem TRG bist, muss hier nichts eingegeben werden. <br> Dies ist eine schulspezifische URL.</div>
         <br>
 
         <label for="username">Untis Benutzername:</label>
