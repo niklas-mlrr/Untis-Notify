@@ -66,12 +66,26 @@ if (isset($_POST['action'])) {
             }
             break;
         case 'testNotification':
-            if (sendslackMessage("sonstiges", "Testbenachrichtigung", "Wenn du das hier liest, hast du alles richtig gemacht! Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind. Nun kannst du die Slack App überall dort installieren und dich anmelden, wo du benachrichtigt werden möchtest (Handy, iPad, usw.).", "")) {
+
+            $testNotificationAusfall = sendslackMessage("ausfall", "Testbenachrichtigung für den Channel ausfall", "Test", "");
+            $testNotificationRaumänderung = sendslackMessage("raumänderung", "Testbenachrichtigung für den Channel raumänderung", "Test", "");
+            $testNotificationVertretung = sendslackMessage("vertretung", "Testbenachrichtigung für den Channel vertretung", "Test", "");
+            $testNotificationSonstiges = sendslackMessage("sonstiges", "Testbenachrichtigung für den Channel sonstiges", "Wenn du das hier liest, hast du alles richtig gemacht! (Solange auf der Website \"Alle Testbenachrichtigungen erfolgreich gesendet\" stand) Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind. Nun kannst du die Slack App überall dort installieren und dich anmelden, wo du benachrichtigt werden möchtest (Handy, iPad, usw.).", "");
+
+            if ($testNotificationAusfall && $testNotificationRaumänderung && $testNotificationVertretung && $testNotificationSonstiges) {
                 if (writeDataToDatabase($conn, [$username], "UPDATE users SET setup_complete = true WHERE username = ?")) {
-                    $btnResponse = getMessageText("testNotificationSent");
+                    $btnResponse = getMessageText("testNotificationAllSent");
                 }
-            } else {
-                $btnResponse = getMessageText("testNotificationNotSent");
+            } elseif(!$testNotificationSonstiges && !$testNotificationVertretung && !$testNotificationRaumänderung && !$testNotificationAusfall) {
+                $btnResponse = getMessageText("testNotificationAllNotSent");
+            } elseif (!$testNotificationAusfall) {
+                $btnResponse = getMessageText("testNotificationAusfallNotSent");
+            } elseif (!$testNotificationRaumänderung) {
+                $btnResponse = getMessageText("testNotificationRaumänderungNotSent");
+            } elseif (!$testNotificationVertretung) {
+                $btnResponse = getMessageText("testNotificationVertretungNotSent");
+            } elseif (!$testNotificationSonstiges) {
+                $btnResponse = getMessageText("testNotificationSonstigesNotSent");
             }
             break;
     }
@@ -80,6 +94,12 @@ if (isset($_POST['action'])) {
 ?>
 
 <div class="parent">
+
+
+    <button id="toggle-theme">
+        <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
+    </button>
+
     <form action="settings.php" method="post">
         <h2>Einstellungen</h2>
         <br>
@@ -96,15 +116,15 @@ if (isset($_POST['action'])) {
             <span class="info-icon" onclick="openExternInfoSite('TageInVorraus')">?</span>
         </div>
         <br><br>
-        <button class="btn-save-settings" type="submit">Einstellungen speichern</button>
+        <button class="btn-save-settings btn" type="submit">Einstellungen speichern</button>
         <br><br>
         <?php echo $btnResponse; ?>
     </form>
     <form action="settings.php" method="post">
-        <button class="btn-testbenachrichtigung" type="submit" name="action" value="testNotification">Testbenachrichtigung senden</button><br>
+        <button class="btn-testbenachrichtigung btn" type="submit" name="action" value="testNotification">Testbenachrichtigung senden</button><br>
         <nobr>
-            <button class="btn-log-out" type="submit" name="action" value="logout">Abmelden</button>
-            <button class="btn-delete-acc" type="submit" name="action" value="deleteAccount">Konto löschen</button>
+            <button class="btn-log-out btn" type="submit" name="action" value="logout">Abmelden</button>
+            <button class="btn-delete-acc btn" type="submit" name="action" value="deleteAccount">Konto löschen</button>
         </nobr>
     </form>
 </div>

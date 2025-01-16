@@ -1,12 +1,55 @@
+:root {
+    --background-color: #f4f4f4;
+    --text-color: black;
+    --header-background-color: lightgray;
+    --button-background-color: #80c3f1;
+    --form-background-color: #fff;
+    --form-box-shadow: rgba(25, 25, 25, 0.1);
+    --input-border-color: #ccc;
+    --input-background-color: white;
+    --info-icon-background-color: #dbdbdb;
+    --info-field-background-color: #f9f9f9;
+    --info-field-border-color: #ccc;
+    --btn-testbenachrichtigung-background-color: #b1b5b3;
+    --btn-save-settings-background-color: #45a049;
+    --btn-log-out-background-color: #838a87;
+    --btn-delete-acc-background-color: #ff642b;
+    --notification-text-color: black;
+}
+
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
+    background-color: var(--background-color);
+    color: var(--text-color);
     margin: 0;
     padding: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
+}
+
+.header {
+    background-color: var(--header-background-color);
+}
+
+body.dark-mode {
+    --background-color: rgb(35, 35, 35);
+    --text-color: white;
+    --header-background-color: darkgray;
+    --button-background-color: #1f5880;
+    --form-background-color: #333;
+    --form-box-shadow: rgba(170, 170, 170, 0.1);
+    --input-border-color: #555;
+    --input-background-color: #444;
+    --info-icon-background-color: #555;
+    --info-field-background-color: #444;
+    --info-field-border-color: #555;
+    --btn-testbenachrichtigung-background-color: #606060;
+    --btn-save-settings-background-color: #357a38;
+    --btn-log-out-background-color: #444;
+    --btn-delete-acc-background-color: #a22b1a;
+    --notification-text-color: white;
 }
 
 .parent {
@@ -18,10 +61,10 @@ body {
 }
 
 form {
-    background-color: #fff;
+    background-color: var(--form-background-color);
     padding: 25px;
     border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0 10px var(--form-box-shadow);
     max-width: 85%;
     margin-bottom: 10px;
     margin-top: 25px;
@@ -47,17 +90,19 @@ input[type="password"] {
     width: 92.5%;
     padding: 10px;
     margin-bottom: 10px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--input-border-color);
     border-radius: 5px;
+    background-color: var(--input-background-color);
+    color: var(--text-color);
 }
 
 input[type="submit"] {
     width: 100%;
     padding: 10px;
-    background-color: #007BFF;
+    background-color: var(--button-background-color);
     border: none;
     border-radius: 5px;
-    color: white;
+    color: var(--text-color);
     font-weight: bold;
     cursor: pointer;
 }
@@ -72,9 +117,10 @@ input[type="submit"] {
     text-align: center;
 }
 
-button {
+.btn {
     border: none;
-    color: white;
+    background-color: var(--button-background-color);
+    color: var(--text-color);
     padding: 15px 32px;
     text-align: center;
     text-decoration: none;
@@ -86,17 +132,17 @@ button {
 }
 
 .btn-testbenachrichtigung {
-    background-color: #646866;
+    background-color: var(--btn-testbenachrichtigung-background-color);
     width: 100%;
 }
 
 .btn-save-settings {
-    background-color: #45a049;
+    background-color: var(--btn-save-settings-background-color);
     width: 100%;
 }
 
 .btn-log-out {
-    background-color: #646866;
+    background-color: var(--btn-log-out-background-color);
     width: 48.58%;
     display: inline-flex;
     justify-content: center;
@@ -104,7 +150,7 @@ button {
 }
 
 .btn-delete-acc {
-    background-color: #dd3119;
+    background-color: var(--btn-delete-acc-background-color);
     width: 48.58%;
     display: inline-flex;
     justify-content: center;
@@ -115,8 +161,8 @@ button {
     display: inline-block;
     width: 25px;
     height: 25px;
-    background-color: #dbdbdb;
-    color: black;
+    background-color: var(--info-icon-background-color);
+    color: var(--text-color);
     text-align: center;
     border-radius: 50%;
     cursor: pointer;
@@ -127,8 +173,8 @@ button {
 
 .info-field {
     display: none;
-    background-color: #f9f9f9;
-    border: 1px solid #ccc;
+    background-color: var(--info-field-background-color);
+    border: 1px solid var(--info-field-border-color);
     padding: 10px;
     margin-top: 5px;
     max-width: 77.2%;
@@ -148,7 +194,7 @@ button {
     position: fixed;
     left: 50%;
     transform: translateX(-50%);
-    max-width: 360px;
+    max-width: 376px;
     height: auto;
     z-index: 100;
 }
@@ -162,6 +208,7 @@ button {
     min-width: 300px;
     text-align: center;
     z-index: 1;
+    color: var(--notification-text-color);
 }
 
 /* Media Queries für mobile Geräte */
@@ -175,10 +222,24 @@ button {
     .parent {
         width: 90%;
     }
-
 }
 
 .info-text {
     font-size: 12px;
     color: rgb(100,100,100);
+}
+
+#toggle-theme {
+    background: none;
+    border: none;
+}
+
+.dark-mode-switch-icon {
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+
+    position: relative;
+    top: 75px;
+    left: -149px;
 }
