@@ -38,3 +38,19 @@ document.querySelector('form').addEventListener('submit', function(event) {
         schoolUrlInput.value = schoolUrlInput.placeholder;
     }
 });
+
+
+
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (prefersDarkScheme) {
+        document.body.classList.add('dark-mode');
+    }
+
+    const toggleButton = document.getElementById('toggle-theme');
+    toggleButton.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+    });
+});
