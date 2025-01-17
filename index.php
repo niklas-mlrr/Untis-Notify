@@ -23,7 +23,7 @@ if ($username && $password && $schoolUrl) {
 
         $conn = connectToDatabase();
 
-        $isUserInDatabase = getRowsFromDatabase($conn, [$username, $password], "SELECT * FROM users WHERE username = ? AND password = ?") > 0;
+        $isUserInDatabase = !empty(getRowsFromDatabase($conn, [$username, $password], "SELECT * FROM users WHERE username = ? AND password = ?"));
 
         if (!$isUserInDatabase) {
             writeDataToDatabase($conn, [$username, $password, $schoolUrl], "INSERT INTO users (username, password, school_url) VALUES (?, ?, ?)");
@@ -34,6 +34,10 @@ if ($username && $password && $schoolUrl) {
         $_SESSION['conn'] = $conn;
         $_SESSION['schoolUrl'] = $schoolUrl;
 
+
+        date_default_timezone_set('Europe/Berlin');
+        $currentTimestamp = date('Y-m-d h:i:s', time());
+        writeDataToDatabase($conn, [$currentTimestamp, $username], "UPDATE users SET last_login = ? WHERE username = ?");
 
         $conn->close();
         header("Location: settings.php");
@@ -58,7 +62,7 @@ if ($username && $password && $schoolUrl) {
 
 <div class="parent">
 
-    <button id="toggle-theme">
+    <button id="toggle-theme" class="dark-mode-switch-btn">
         <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
     </button>
 
