@@ -27,6 +27,9 @@ function openExternInfoSite(info) {
         case "password":
             url = "https://niklas.craft.me/Untis-Benachrichtigungen-Anleitung/b/880025AB-BCD2-428C-A36E-6FF4540F6E41/Untis-Passwort-%C3%A4ndern";
             break;
+        case "dictionary":
+            url = "https://niklas.craft.me/Untis-Benachrichtigungen-Anleitung/b/E86C4748-2AA7-42E7-98EA-9903F9144F77/Personalisierbares-Dictionary";
+            break;
 
     }
     window.open(url, '_blank');
