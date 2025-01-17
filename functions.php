@@ -3,26 +3,19 @@
 
 
 
-function initiateCheck() {
-    global $username, $password, $conn;
-
-    $conn = connectToDatabase();
-    $setupComplete = getColumnFromDatabase($conn, [$username], "setup_complete", "SELECT setup_complete FROM users where username  = ?");
-
-    $schoolUrl = getColumnFromDatabase($conn, [$username], "school_url", "SELECT school_url FROM users where username  = ?");
-    $login = loginToWebUntis($username, $password, $schoolUrl);
-
-    if (!$setupComplete || !$login) {
-        return;
-    }
-
-    $students = getStudents($login);
+function initiateCheck($conn, $username, $password) {
 
     $currentDate = date("Ymd");
     writeDataToDatabase($conn, [$currentDate], "DELETE FROM timetables WHERE for_Date < ?");    // Delete old timetables
 
+    $schoolUrl = getColumnFromDatabase($conn, [$username], "school_url", "SELECT school_url FROM users where username  = ?");
+    $login = loginToWebUntis($username, $password, $schoolUrl);
 
-    // for each user:
+    if (!$login) {
+        return;
+    }
+
+    $students = getStudents($login);
 
 
     $userId = getStudentIdByName($students, $username);
@@ -35,14 +28,14 @@ function initiateCheck() {
         $formatedTimetable = getFormatedTimetable($timetable);
 
 
-        $lastRetrieval = getColumnFromDatabase($conn, [$date, $username], "timetableData", "SELECT timetableData FROM timetables where for_Date  = ? AND user = ?");
+        $lastRetrieval = getColumnFromDatabase($conn, [$date, $username], "timetable_data", "SELECT timetable_data FROM timetables where for_Date  = ? AND user = ?");
         if($lastRetrieval){
             $lastRetrieval = json_decode($lastRetrieval, true);
         }
 
 
         if (!$lastRetrieval && $formatedTimetable != NULL) {
-            writeDataToDatabase($conn, [$formatedTimetable, $date, $username], "INSERT INTO timetables (timetableData, for_Date, user) VALUES (?, ?, ?)");
+            writeDataToDatabase($conn, [$formatedTimetable, $date, $username], "INSERT INTO timetables (timetable_data, for_Date, user) VALUES (?, ?, ?)");
             continue;
         } else if (!$lastRetrieval && $formatedTimetable == NULL) {
             continue;
@@ -54,10 +47,9 @@ function initiateCheck() {
 
 
         if ($compResult) {  // Update the database with the new timetable
-            writeDataToDatabase($conn, [$formatedTimetable, $date, $username], "UPDATE timetables SET timetableData = ?, for_Date = ?, user = ? WHERE for_Date = $date");
+            writeDataToDatabase($conn, [$formatedTimetable, $date], "UPDATE timetables SET timetable_data = ? WHERE for_Date = ?");
         }
     }
-    $conn->close();
 }
 
 
@@ -324,33 +316,103 @@ function cmp($a, $b) {
 }
 
 
+
+
+
+
+
+
+function generateReplacementArray($conn, $username) {
+    $replacements = getColumnFromDatabase($conn, [$username], "dictionary", "SELECT dictionary FROM users WHERE username = ?");
+    $replacements = explode(",", $replacements);
+
+    foreach ($replacements as $replacement) {
+        $replacement = explode("=", $replacement);
+        $replacements[$replacement[0]] = $replacement[1];
+    }
+    array_splice($replacements, 0, count($replacements) / 2);
+
+
+    print_r($replacements);
+
+
+}
+
+
+$replacements = [
+    'ph1E' => 'Physik',
+];
+
+/**
+ * Ersetzt vordefinierte Wörter im subject durch andere vordefinierte Wörter
+ *
+ * @param string $subject Das zu überprüfende Fach
+ * @param array $replacements Das Array mit den Ersetzungen
+ * @return string Das ersetzte Fach
+ */
+function replaceSubjectWords($subject, $replacements) {
+    return str_replace(array_keys($replacements), array_values($replacements), $subject);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /**
  * @param $timetable
  * @return array
  */
 function getFormatedTimetable($timetable) {
-    global $startTimes;
+    global $startTimes, $replacements;
     $numOfLessons = count($timetable);
     $formatedTimetable = [];
+    $seenLessons = [];
 
     for($i = 0; $i < $numOfLessons; $i++){
+        $lessonNum = isset($startTimes[$timetable[$i]["startTime"]]) ? $startTimes[$timetable[$i]["startTime"]] : "notSet";
+
+        // Hiermit werden "doppelte" Stunden herausgefiltert, da dies sonst zu Problemen bei der compArray-Funktion führen würde
+        // Mir ist bewusst, dass dies nicht die beste Lösung ist
+
+        // Wenn die Stunde bereits gesehen wurde, entfernen wir die erste Instanz
+        if (in_array($lessonNum, $seenLessons)) {
+            foreach ($formatedTimetable as $key => $lesson) {
+                if ($lesson['lessonNum'] == $lessonNum) {
+                    unset($formatedTimetable[$key]);
+                    break;
+                }
+            }
+        }
 
         $canceled = isset($timetable[$i]["code"]) ? 1 : 0;
 
-
         $lesson = [
             "canceled" => $canceled,
-            "lessonNum" => isset($startTimes[$timetable[$i]["startTime"]]) ? $startTimes[$timetable[$i]["startTime"]] : null,
-            "subject" => isset($timetable[$i]["su"][0]["longname"]) ? $timetable[$i]["su"][0]["longname"] : null,
-            "teacher" => isset($timetable[$i]["te"][0]["name"]) ? $timetable[$i]["te"][0]["name"] : null,
-            "room" => isset($timetable[$i]["ro"][0]["name"]) ? $timetable[$i]["ro"][0]["name"] : null,
+            "lessonNum" => $lessonNum,
+            "subject" => isset($timetable[$i]["su"][0]["longname"]) ? $timetable[$i]["su"][0]["longname"] : "notSet",
+            "teacher" => isset($timetable[$i]["te"][0]["name"]) ? $timetable[$i]["te"][0]["name"] : "notSet",
+            "room" => isset($timetable[$i]["ro"][0]["name"]) ? $timetable[$i]["ro"][0]["name"] : "notSet",
         ];
-        array_push($formatedTimetable, $lesson);
+
+
+
+        $lesson["subject"] = replaceSubjectWords($lesson["subject"], $replacements);
+
+        $formatedTimetable[] = $lesson;
+        $seenLessons[] = $lessonNum; // Stunde als gesehen markieren
     }
 
-
-    // Sort by lessonNum
-    usort($formatedTimetable,"cmp");
+    // Nach lessonNum sortieren
+    usort($formatedTimetable, "cmp");
 
     return $formatedTimetable;
 }
@@ -365,106 +427,87 @@ function getFormatedTimetable($timetable) {
 
 
 /**
- * @param $array1
- * @param $array2
+ * @param $array1 (= lastRetrieval)
+ * @param $array2 (= formatedTimetable)
  * @return array|string
  */
 function compareArrays($array1, $array2, $date) {
+    $differences = findDifferences($array1, $array2);
+    sendSlackMessages($differences, $date);
+    return !empty($differences);
+}
 
-    $differencesChannel = [];
-    $differencesTitle = [];
-    $differencesMessage = [];
+function findDifferences($array1, $array2) {
+    $differences = [];
 
-    // Vergleiche alle Elemente des ersten Arrays
     foreach ($array1 as $key => $item) {
-        // Wenn der Index im zweiten Array nicht existiert, markiere dies
         if (!isset($array2[$key])) {
-            $differencesChannel[] = "sonstiges";
-            $differencesTitle[] = "{$item["lessonNum"]}. Stunde {$item["subject"]} fehlt nun komplett";    //(...  im zweiten Array)
-            $differencesMessage[] = " ";
+            $differences[] = createDifference("sonstiges", "{$item['lessonNum']}. Stunde {$item['subject']} fehlt jetzt komplett", " ");
             continue;
         }
 
-        // Vergleiche die einzelnen Werte
+        $canceled = false;
         foreach ($item as $subKey => $value) {
-            if(isset($array1[$key][$subKey])){
-                echo "key: $key, subkey: $subKey, value: $value";
-            }
-            if (!isset($array2[$key][$subKey])) {
-                $differencesChannel[] = "sonstiges";
-                $differencesTitle[] = "Eigenschaft \"$subKey\" fehlt in der {$item["lessonNum"]}. Stunde";
-                $differencesMessage[] = " ";
-            }
-
-            if ($array2[$key][$subKey] !== $value) {        // Wird ausgeführt, wenn ein Wert unterschiedlich ist
-                $differencesTitle[] = "{$item["lessonNum"]}. Stunde {$item["subject"]}";   // z.B. 1. Stunde Mathe
-                if ($subKey == "canceled" && $value == 1) {
-                    $differencesChannel[] = "sonstiges";
-                    $differencesMessage[] = "Jetzt kein Ausfall mehr";
-                    continue;
-                }
-                if ($subKey == "canceled" && $value == 0) {
-                    $differencesChannel[] = "ausfall";
-                    $differencesMessage[] = " ";
-                    continue 2;
-                }
-                if ($subKey == "teacher" && $array2[$key][$subKey] == "---") {
-                    $differencesChannel[] = "sonstiges";
-                    $differencesMessage[] = "Lehrer ausgetragen (Vorher: $value)";
-                    continue;
-                } elseif ($subKey == "teacher") {
-                    $differencesChannel[] = "vertretung";
-                    $differencesMessage[] = "Vorher: $value; Jetzt: {$array2[$key][$subKey]}";
-                    continue;
-                }
-                if ($subKey == "room" && $array2[$key][$subKey] == "---") {
-                    $differencesChannel[] = "sonstiges";
-                    $differencesMessage[] = "Raum ausgetragen (Vorher: $value)";
-                    continue;
-                } elseif ($subKey == "room") {
-                    $differencesChannel[] = "raumänderung";
-                    $differencesMessage[] = "Vorher: $value; Jetzt: {$array2[$key][$subKey]}";
-                    continue;
-                }
-                if ($subKey == "subject" && $array2[$key][$subKey] == "---") {
-                    $differencesChannel[] = "sonstiges";
-                    $differencesMessage[] = "Fach ausgetragen (Vorher: $value)";
-                    continue;
-                } elseif ($subKey == "subject") {
-                    $differencesChannel[] = "sonstiges";
-                    $differencesMessage[] = "Fachwechsel; Vorher: $value; Jetzt: {$array2[$key][$subKey]}";
-                    continue;
-                }
-                }
+            if ($subKey == "canceled" && $array2[$key][$subKey] == 1 && $array1[$key][$subKey] != 1) {     // Wenn die Stunde ausfällt, sollen keine weiteren Benachrichtigungen gesendet werden
+                $differences[] = createDifference("ausfall", "{$item['lessonNum']}. Stunde {$item['subject']}", " ");
+                $canceled = true;
+                break;
             }
         }
 
+        if ($canceled) {
+            continue;
+        }
 
-    // Prüfe auch das zweite Array auf zusätzliche Indizes
+        foreach ($item as $subKey => $value) {
+            if ($value != "notSet" && !isset($array1[$key][$subKey])) {
+                $differences[] = createDifference("sonstiges", "Eigenschaft \"$subKey\" fehlt in der {$item['lessonNum']}. Stunde", " ");
+            } elseif ($array2[$key][$subKey] !== $value) {
+                $differences[] = handleDifference($subKey, $value, $array2[$key][$subKey], $item);
+            }
+        }
+    }
+
     foreach ($array2 as $key => $item) {
         if (!isset($array1[$key])) {
-            $differencesChannel[] = "{$item["lessonNum"]}. Stunde: Neues Fach";
-            $differencesMessage[] = "{$item["subject"]} bei {$item["teacher"]} in Raum {$item["room"]} ist nun mit dazugekommen";
+            $differences[] = createDifference("sonstiges", "{$item['lessonNum']}. Stunde {$item['subject']}", "Neues Fach bei {$item['teacher']} in Raum {$item['room']} ist mit dazugekommen");
         }
     }
 
-
-
-    for ($i = 0; $i < count($differencesChannel); $i++) {
-        $chanel = $differencesChannel[$i];
-        $title = $differencesTitle[$i];
-        $message = $differencesMessage[$i];
-
-        sendslackMessage($chanel, $title, $message, $date);
-    }
-
-    if (empty($differencesChannel)) {
-        return false;
-    }
-    return "Änderungen vorhanden";
-
-
+    return $differences;
 }
+
+function createDifference($channel, $title, $message) {
+    return ['channel' => $channel, 'title' => $title, 'message' => $message];
+}
+
+function handleDifference($subKey, $value, $newValue, $item) {
+    $lessonNum = $item['lessonNum'];
+    $subject = $item['subject'];
+
+    switch ($subKey) {
+        case "canceled":
+            return $value == 1 ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Jetzt kein Ausfall mehr") : createDifference("ausfall", "$lessonNum. Stunde $subject", " ");
+        case "teacher":
+            return $newValue == "---" ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Lehrer ausgetragen (Vorher: $value)") : createDifference("vertretung", "$lessonNum. Stunde $subject", "Vorher: $value; Jetzt: $newValue");
+        case "room":
+            return $newValue == "---" ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Raum ausgetragen (Vorher: $value)") : createDifference("raumänderung", "$lessonNum. Stunde $subject", "Vorher: $value; Jetzt: $newValue");
+        case "subject":
+            return $newValue == "---" ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Fach ausgetragen (Vorher: $value)") : createDifference("sonstiges", "$lessonNum. Stunde $subject", "Fachwechsel; Vorher: $value; Jetzt: $newValue");
+        default:
+            return null;
+    }
+}
+
+function sendSlackMessages($differences, $date) {
+    foreach ($differences as $difference) {
+        sendslackMessage($difference['channel'], $difference['title'], $difference['message'], $date);
+    }
+}
+
+
+
+
 
 
 
@@ -500,7 +543,7 @@ function getMessageText($case) {
             return '<p class="failed">Fehler beim Löschen des Kontos</p>';
 
         case "testNotificationAllSent":
-            return '<p class="successful">Alle Testbenachrichtigungen erfolgreich gesendet</p>';
+            return '<p class="successful">Alle 4 Testbenachrichtigungen erfolgreich gesendet</p>';
         case "testNotificationAllNotSent":
             return '<p class="failed">Fehler beim Senden aller Testbenachrichtigungen</p>';
         case "testNotificationAusfallNotSent":
@@ -557,9 +600,9 @@ function connectToDatabase(): mysqli {
  * @param mysqli $conn
  * @param array $inputs
  * @param string $query
- * @return bool
+ * @return array
  */
-function getRowsFromDatabase(mysqli $conn, array $inputs, string $query): bool {
+function getRowsFromDatabase(mysqli $conn, array $inputs, string $query): array {
     $stmt = $conn->prepare($query);
     if (!$stmt) {
         throw new Exception("Prepare failed: " . $conn->error);
@@ -570,8 +613,8 @@ function getRowsFromDatabase(mysqli $conn, array $inputs, string $query): bool {
 
     $stmt->execute();
     $result = $stmt->get_result();
+    return $result->fetch_all(MYSQLI_ASSOC);
 
-    return $result->num_rows > 0;
 }
 
 
