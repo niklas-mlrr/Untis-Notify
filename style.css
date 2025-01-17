@@ -229,17 +229,17 @@ input[type="submit"] {
     color: rgb(100,100,100);
 }
 
-#toggle-theme {
+.dark-mode-switch-btn {
     background: none;
     border: none;
+
+    position: relative;
+    top: 75px;
+    left: -149px;
+    cursor: pointer;
 }
 
 .dark-mode-switch-icon {
     width: 40px;
     height: 40px;
-    cursor: pointer;
-
-    position: relative;
-    top: 75px;
-    left: -149px;
 }
