@@ -10,9 +10,9 @@
     --info-icon-background-color: #dbdbdb;
     --info-field-background-color: #f9f9f9;
     --info-field-border-color: #ccc;
-    --btn-testbenachrichtigung-background-color: #b1b5b3;
+    --btn-testbenachrichtigung-background-color: #868e8a;
     --btn-save-settings-background-color: #45a049;
-    --btn-log-out-background-color: #838a87;
+    --btn-log-out-background-color: #b1b5b3;
     --btn-delete-acc-background-color: #ff642b;
     --notification-text-color: black;
 }
@@ -21,6 +21,7 @@ body {
     font-family: Arial, sans-serif;
     background-color: var(--background-color);
     color: var(--text-color);
+    font-size: 1.05em;
     margin: 0;
     padding: 0;
     display: flex;
@@ -125,7 +126,7 @@ input[type="submit"] {
     text-align: center;
     text-decoration: none;
     display: inline-block;
-    font-size: 16px;
+    font-size: 1em;
     margin: 4px 2px;
     cursor: pointer;
     border-radius: 5px;
@@ -157,6 +158,21 @@ input[type="submit"] {
     align-items: center;
 }
 
+.info-field {
+    display: none;
+    background-color: var(--info-field-background-color);
+    border: 1px solid var(--info-field-border-color);
+
+    font-size: 0.8em;
+    width: 92.5%;
+    padding: 10px 10px 3px 3px;
+    -webkit-padding-before: 10px;
+    -webkit-padding-after: 10px;
+
+    margin-top: 5px;
+    border-radius: 5px;
+}
+
 .info-icon {
     display: inline-block;
     width: 25px;
@@ -169,16 +185,6 @@ input[type="submit"] {
     margin-left: 10px;
     margin-bottom: 11px;
     padding-top: 6px;
-}
-
-.info-field {
-    display: none;
-    background-color: var(--info-field-background-color);
-    border: 1px solid var(--info-field-border-color);
-    padding: 10px;
-    margin-top: 5px;
-    max-width: 77.2%;
-    border-radius: 5px;
 }
 
 .img-div {
@@ -211,7 +217,7 @@ input[type="submit"] {
     color: var(--notification-text-color);
 }
 
-/* Media Queries für mobile Geräte */
+
 @media (max-width: 600px) {
     body {
         flex-direction: column;
@@ -225,9 +231,10 @@ input[type="submit"] {
 }
 
 .info-text {
-    font-size: 12px;
+    font-size: 0.7em;
     color: rgb(100,100,100);
 }
+
 
 .dark-mode-switch-btn {
     background: none;
@@ -235,11 +242,16 @@ input[type="submit"] {
 
     position: relative;
     top: 75px;
-    left: -149px;
+    left: -42.7%;
     cursor: pointer;
 }
+
 
 .dark-mode-switch-icon {
     width: 40px;
     height: 40px;
+}
+
+.dark-mode-switch-icon-white {
+    filter: invert(1);
 }
