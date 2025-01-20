@@ -1,14 +1,11 @@
 <?php
 
 
-
-
 function initiateCheck($conn, $username, $password) {
 
-    $currentDate = date("Ymd");
-    writeDataToDatabase($conn, [$currentDate], "DELETE FROM timetables WHERE for_Date < ?");    // Delete old timetables
 
-    $schoolUrl = getColumnFromDatabase($conn, [$username], "school_url", "SELECT school_url FROM users where username  = ?");
+
+    $schoolUrl = getValueFromDatabase($conn, "users", "school_url", ["username" => $username]);
     $login = loginToWebUntis($username, $password, $schoolUrl);
 
     if (!$login) {
@@ -18,26 +15,33 @@ function initiateCheck($conn, $username, $password) {
     $students = getStudents($login);
 
 
+
     $userId = getStudentIdByName($students, $username);
-    $notificationForDaysInAdvance = getColumnFromDatabase($conn, [$username], "notification_for_days_in_advance", "SELECT notification_for_days_in_advance FROM users where username  = ?");
+    $notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username]);
+
+    $currentDate = date("Ymd");
+    $maxDateToCheck = date("Ymd", strtotime("+$notificationForDaysInAdvance days"));
+    writeToDatabase($conn, [$currentDate], "DELETE FROM timetables WHERE for_Date < ?");    // Delete old timetables
+    writeToDatabase($conn, [$maxDateToCheck, $username], "DELETE FROM timetables WHERE for_Date > ? AND user = ?");    // Delete timetables that are outside the notification range
 
     for ($i = 0; $i < $notificationForDaysInAdvance; $i++) {
         $date = date("Ymd", strtotime("+$i days"));
 
         $timetable = getTimetable($login, $userId, $date);
-        $formatedTimetable = getFormatedTimetable($timetable);
+        $replacements = getValueFromDatabase($conn, "users", "dictionary", ["username" => $username]);
+        $formatedTimetable = getFormatedTimetable($timetable, $replacements);
 
 
-        $lastRetrieval = getColumnFromDatabase($conn, [$date, $username], "timetable_data", "SELECT timetable_data FROM timetables where for_Date  = ? AND user = ?");
+        $lastRetrieval = getValueFromDatabase($conn, "timetables", "timetable_data", ["for_Date" => $date, "user" => $username]);
         if($lastRetrieval){
             $lastRetrieval = json_decode($lastRetrieval, true);
         }
 
 
-        if (!$lastRetrieval && $formatedTimetable != NULL) {
-            writeDataToDatabase($conn, [$formatedTimetable, $date, $username], "INSERT INTO timetables (timetable_data, for_Date, user) VALUES (?, ?, ?)");
+        if (!$lastRetrieval && $formatedTimetable != null) {
+            writeToDatabase($conn, [$formatedTimetable, $date, $username], "INSERT INTO timetables (timetable_data, for_Date, user) VALUES (?, ?, ?)");
             continue;
-        } else if (!$lastRetrieval && $formatedTimetable == NULL) {
+        } elseif (!$lastRetrieval && $formatedTimetable == null) {
             continue;
         }
 
@@ -46,8 +50,9 @@ function initiateCheck($conn, $username, $password) {
 
 
 
-        if ($compResult) {  // Update the database with the new timetable
-            writeDataToDatabase($conn, [$formatedTimetable, $date], "UPDATE timetables SET timetable_data = ? WHERE for_Date = ?");
+        // Update the database with the new timetable
+        if ($compResult) {
+            writeToDatabase($conn, [$formatedTimetable, $date, $username], "UPDATE timetables SET timetable_data = ? WHERE for_Date = ? AND user = ?");
         }
     }
 }
@@ -58,34 +63,56 @@ function initiateCheck($conn, $username, $password) {
 
 
 /**
- * Sends a message to a slack channel using the slack Web API
+ * Sends a message to a Slack channel using the slack Web API
  * @param string $channel The channel to send the message to (e.g. "#general")
+ * @param string $title The title of the message
  * @param string $message The message to send
- * @param string $channel The channel to send the message to (e.g. "#general")
- * @param string $bot_token Your slack bot user OAuth token
+ * @param string $date The date to which the message refers
+ * @return bool Whether the message was sent successfully
  */
-function sendslackMessage($channel, $title, $message, $date) {
+function sendslackMessage($channel, $title, $message, $date): bool {
     global $username, $conn;
     $url = 'https://slack.com/api/chat.postMessage';
 
 
-    $botToken = getColumnFromDatabase($conn, [$username], "slack_bot_token", "SELECT slack_bot_token FROM users where username  = ?");
+    $botToken = getValueFromDatabase($conn, "users", "slack_bot_token", ["username" => $username]);
 
 
 
-    switch ($date) {
-        case date("Ymd"):
-            $date = "Heute: ";
-            break;
-        case date("Ymd", strtotime("+1 days")):
-            $date = "Morgen: ";
-            break;
-        case date("Ymd", strtotime("+2 days")):
-            $date = "Übermorgen: ";
-            break;
-        default:
-            $date = $date ? date("d.m", strtotime($date)) . ": " : " ";
-    }
+switch (date('w', strtotime($date))) {
+    case 0:
+        $weekday = "So";
+        break;
+    case 1:
+        $weekday = "Mo";
+        break;
+    case 2:
+        $weekday = "Di";
+        break;
+    case 3:
+        $weekday = "Mi";
+        break;
+    case 4:
+        $weekday = "Do";
+        break;
+    case 5:
+        $weekday = "Fr";
+        break;
+    case 6:
+        $weekday = "Sa";
+        break;
+    default:
+        $weekday = " ";
+        break;
+}
+
+
+    $date = match ($date) {
+        date("Ymd") => "Heute: ",
+        date("Ymd", strtotime("+1 days")) => "Morgen: ",
+        date("Ymd", strtotime("+2 days")) => "Übermorgen: ",
+        default => $date ? $weekday . ", " . date("d.m", strtotime($date)) . ": " : " ",
+    };
 
 
     // Prepare the payload
@@ -143,7 +170,6 @@ function sendslackMessage($channel, $title, $message, $date) {
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
     $response_data = json_decode($response, true);
-    //print_r($response_data);
 
     if ($http_code !== 200 || !$response_data['ok']) {
         return false;
@@ -201,7 +227,7 @@ function loginToWebUntis(string $username, string $password, string $schoolUrl):
  * @param $payload
  * @return mixed
  */
-function sendApiRequest($sessionId, $payload) {
+function sendApiRequest($sessionId, $payload): mixed {
     $url = "https://niobe.webuntis.com/WebUntis/jsonrpc.do?school=gym-osterode";
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -216,15 +242,7 @@ function sendApiRequest($sessionId, $payload) {
     curl_close($ch);
 
     $result = json_decode($response, true);
-    if (isset($result['result'])) {
-        return $result['result'];
-    } else {
-        if (isset($result['error'])) {
-            echo "<pre>Fehler: " . print_r($result['error'], true) . "</pre>";
-            throw new Exception("Fehler in der API-Antwort.");
-        }
-        throw new Exception("Fehler in der API-Antwort: " . json_encode($result));
-    }
+    return $result['result'] ?? "Error: " . $result['error'];
 }
 
 
@@ -322,9 +340,15 @@ function cmp($a, $b) {
 
 
 
-function generateReplacementArray($conn, $username) {
-    $replacements = getColumnFromDatabase($conn, [$username], "dictionary", "SELECT dictionary FROM users WHERE username = ?");
-    $replacements = explode(",", $replacements);
+function generateReplacementArray($replacements) {
+    if (!$replacements) {
+        return;
+    }
+
+    if (substr($replacements, -1) == ";") {
+        $replacements = substr($replacements, 0, -1);
+    }
+    $replacements = explode(";", $replacements);
 
     foreach ($replacements as $replacement) {
         $replacement = explode("=", $replacement);
@@ -333,15 +357,14 @@ function generateReplacementArray($conn, $username) {
     array_splice($replacements, 0, count($replacements) / 2);
 
 
-    print_r($replacements);
+    $replacements = array_map(function($value, $key) {
+        return [trim($key) => trim($value)];
+    }, $replacements, array_keys($replacements));
 
+    return array_merge(...$replacements);
 
 }
 
-
-$replacements = [
-    'ph1E' => 'Physik',
-];
 
 /**
  * Ersetzt vordefinierte Wörter im subject durch andere vordefinierte Wörter
@@ -351,7 +374,12 @@ $replacements = [
  * @return string Das ersetzte Fach
  */
 function replaceSubjectWords($subject, $replacements) {
-    return str_replace(array_keys($replacements), array_values($replacements), $subject);
+    $replacements = generateReplacementArray($replacements);
+    if (!$replacements) {
+        return $subject;
+    }
+    $result = str_replace(array_keys($replacements), array_values($replacements), $subject);
+    return $result;
 }
 
 
@@ -371,16 +399,16 @@ function replaceSubjectWords($subject, $replacements) {
  * @param $timetable
  * @return array
  */
-function getFormatedTimetable($timetable) {
-    global $startTimes, $replacements;
+function getFormatedTimetable($timetable, $replacements) {
+    global $startTimes;
     $numOfLessons = count($timetable);
     $formatedTimetable = [];
     $seenLessons = [];
 
     for($i = 0; $i < $numOfLessons; $i++){
-        $lessonNum = isset($startTimes[$timetable[$i]["startTime"]]) ? $startTimes[$timetable[$i]["startTime"]] : "notSet";
+        $lessonNum = $startTimes[$timetable[$i]["startTime"]] ?? "notSet";
 
-        // Hiermit werden "doppelte" Stunden herausgefiltert, da dies sonst zu Problemen bei der compArray-Funktion führen würde
+        // Hiermit werden "doppelte" Stunden herausgefiltert, da dies sonst zu Problemen bei der compArray-Funktion führen würde.
         // Mir ist bewusst, dass dies nicht die beste Lösung ist
 
         // Wenn die Stunde bereits gesehen wurde, entfernen wir die erste Instanz
@@ -398,9 +426,9 @@ function getFormatedTimetable($timetable) {
         $lesson = [
             "canceled" => $canceled,
             "lessonNum" => $lessonNum,
-            "subject" => isset($timetable[$i]["su"][0]["longname"]) ? $timetable[$i]["su"][0]["longname"] : "notSet",
-            "teacher" => isset($timetable[$i]["te"][0]["name"]) ? $timetable[$i]["te"][0]["name"] : "notSet",
-            "room" => isset($timetable[$i]["ro"][0]["name"]) ? $timetable[$i]["ro"][0]["name"] : "notSet",
+            "subject" => $timetable[$i]["su"][0]["longname"] ?? "notSet",
+            "teacher" => $timetable[$i]["te"][0]["name"] ?? "notSet",
+            "room" => $timetable[$i]["ro"][0]["name"] ?? "notSet",
         ];
 
 
@@ -448,7 +476,8 @@ function findDifferences($array1, $array2) {
 
         $canceled = false;
         foreach ($item as $subKey => $value) {
-            if ($subKey == "canceled" && $array2[$key][$subKey] == 1 && $array1[$key][$subKey] != 1) {     // Wenn die Stunde ausfällt, sollen keine weiteren Benachrichtigungen gesendet werden
+            // Wenn die Stunde ausfällt, sollen keine weiteren Benachrichtigungen gesendet werden
+            if ($subKey == "canceled" && $array2[$key][$subKey] == 1 && $value != 1) {
                 $differences[] = createDifference("ausfall", "{$item['lessonNum']}. Stunde {$item['subject']}", " ");
                 $canceled = true;
                 break;
@@ -460,7 +489,7 @@ function findDifferences($array1, $array2) {
         }
 
         foreach ($item as $subKey => $value) {
-            if ($value != "notSet" && !isset($array1[$key][$subKey])) {
+            if ($value != "notSet" && !isset($value)) {
                 $differences[] = createDifference("sonstiges", "Eigenschaft \"$subKey\" fehlt in der {$item['lessonNum']}. Stunde", " ");
             } elseif ($array2[$key][$subKey] !== $value) {
                 $differences[] = handleDifference($subKey, $value, $array2[$key][$subKey], $item);
@@ -485,23 +514,19 @@ function handleDifference($subKey, $value, $newValue, $item) {
     $lessonNum = $item['lessonNum'];
     $subject = $item['subject'];
 
-    switch ($subKey) {
-        case "canceled":
-            return $value == 1 ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Jetzt kein Ausfall mehr") : createDifference("ausfall", "$lessonNum. Stunde $subject", " ");
-        case "teacher":
-            return $newValue == "---" ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Lehrer ausgetragen (Vorher: $value)") : createDifference("vertretung", "$lessonNum. Stunde $subject", "Vorher: $value; Jetzt: $newValue");
-        case "room":
-            return $newValue == "---" ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Raum ausgetragen (Vorher: $value)") : createDifference("raumänderung", "$lessonNum. Stunde $subject", "Vorher: $value; Jetzt: $newValue");
-        case "subject":
-            return $newValue == "---" ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Fach ausgetragen (Vorher: $value)") : createDifference("sonstiges", "$lessonNum. Stunde $subject", "Fachwechsel; Vorher: $value; Jetzt: $newValue");
-        default:
-            return null;
-    }
+    return match ($subKey) {
+        "canceled" => $value == 1 ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Jetzt kein Ausfall mehr") : createDifference("ausfall", "$lessonNum. Stunde $subject", " "),
+        "teacher" => $newValue == "---" ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Lehrer ausgetragen (Vorher: $value)") : createDifference("vertretung", "$lessonNum. Stunde $subject", "Vorher: $value; Jetzt: $newValue"),
+        "room" => $newValue == "---" ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Raum ausgetragen (Vorher: $value)") : createDifference("raumänderung", "$lessonNum. Stunde $subject", "Vorher: $value; Jetzt: $newValue"),
+        "subject" => $newValue == "---" ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Fach ausgetragen (Vorher: $value)") : createDifference("sonstiges", "$lessonNum. Stunde $subject", "Fachwechsel; Vorher: $value; Jetzt: $newValue"),
+        default => null,
+    };
 }
 
 function sendSlackMessages($differences, $date) {
     foreach ($differences as $difference) {
         sendslackMessage($difference['channel'], $difference['title'], $difference['message'], $date);
+        //echo $difference['channel'] . ", " . $difference['title'] . ", " . $difference['message'] . ", " . $date . "<br>";
     }
 }
 
@@ -528,38 +553,20 @@ function sendSlackMessages($differences, $date) {
  * @return string
  */
 function getMessageText($case) {
-    switch ($case) {
-        case "loginFailed":
-            return '<p class="failed">Fehler beim Einloggen</p>';
-
-        case "settingsSavedSuccessfully":
-            return '<p class="successful">Einstellungen erfolgreich gespeichert</p>';
-        case "settingsNotSaved":
-            return '<p class="failed">Fehler beim Speichern der Einstellungen</p>';
-
-        case "accountDeletedSuccessfully":
-            return '<p class="successful">Konto erfolgreich gelöscht</p>';
-        case "accountNotDeleted":
-            return '<p class="failed">Fehler beim Löschen des Kontos</p>';
-
-        case "testNotificationAllSent":
-            return '<p class="successful">Alle 4 Testbenachrichtigungen erfolgreich gesendet</p>';
-        case "testNotificationAllNotSent":
-            return '<p class="failed">Fehler beim Senden aller Testbenachrichtigungen</p>';
-        case "testNotificationAusfallNotSent":
-            return '<p class="failed">Fehler beim Senden der Testbenachrichtigung für den Channel ausfall</p>';
-        case "testNotificationRaumänderungNotSent":
-            return '<p class="failed">Fehler beim Senden der Testbenachrichtigung für den Channel raumänderung</p>';
-        case "testNotificationVertretungNotSent":
-            return '<p class="failed">Fehler beim Senden der Testbenachrichtigung für den Channel vertretung</p>';
-        case "test NotificationSonstigesNotSent":
-            return '<p class="failed">Fehler beim Senden der Testbenachrichtigung für den Channel sonstiges</p>';
-
-
-
-        default:
-            return "";
-    }
+    return match ($case) {
+        "loginFailed" => '<p class="failed">Fehler beim Einloggen</p>',
+        "settingsSavedSuccessfully" => '<p class="successful">Einstellungen erfolgreich gespeichert</p>',
+        "settingsNotSaved" => '<p class="failed">Fehler beim Speichern der Einstellungen</p>',
+        "accountDeletedSuccessfully" => '<p class="successful">Konto erfolgreich gelöscht</p>',
+        "accountNotDeleted" => '<p class="failed">Fehler beim Löschen des Kontos</p>',
+        "testNotificationAllSent" => '<p class="successful">Alle 4 Testbenachrichtigungen erfolgreich gesendet</p>',
+        "testNotificationAllNotSent" => '<p class="failed">Fehler beim Senden aller Testbenachrichtigungen</p>',
+        "testNotificationAusfallNotSent" => '<p class="failed">Fehler beim Senden der Testbenachrichtigung für den Channel ausfall</p>',
+        "testNotificationRaumänderungNotSent" => '<p class="failed">Fehler beim Senden der Testbenachrichtigung für den Channel raumänderung</p>',
+        "testNotificationVertretungNotSent" => '<p class="failed">Fehler beim Senden der Testbenachrichtigung für den Channel vertretung</p>',
+        "testNotificationSonstigesNotSent" => '<p class="failed">Fehler beim Senden der Testbenachrichtigung für den Channel sonstiges</p>',
+        default => "",
+    };
 }
 
 
@@ -602,7 +609,19 @@ function connectToDatabase(): mysqli {
  * @param string $query
  * @return array
  */
-function getRowsFromDatabase(mysqli $conn, array $inputs, string $query): array {
+
+function getRowsFromDatabase(mysqli $conn, string $table, array $inputsAndConditions): array {
+    $conditions = [];
+    $inputs = [];
+
+    foreach ($inputsAndConditions as $key => $value) {
+        $conditions[] = "$key = ?";
+        $inputs[] = $value;
+    }
+
+    $whereClause = implode(' AND ', $conditions);
+    $query = "SELECT * FROM $table WHERE $whereClause";
+    
     $stmt = $conn->prepare($query);
     if (!$stmt) {
         throw new Exception("Prepare failed: " . $conn->error);
@@ -625,7 +644,18 @@ function getRowsFromDatabase(mysqli $conn, array $inputs, string $query): array 
  * @param string $query
  * @return string|null
  */
-function getColumnFromDatabase(mysqli $conn, array $inputs, string $dataFromColumn, string $query): ?string {
+function getValueFromDatabase(mysqli $conn, string $table, string $dataFromColumn, array $inputsAndConditions): ?string {
+    $conditions = [];
+    $inputs = [];
+
+    foreach ($inputsAndConditions as $key => $value) {
+        $conditions[] = "$key = ?";
+        $inputs[] = $value;
+    }
+
+    $whereClause = implode(' AND ', $conditions);
+    $query = "SELECT $dataFromColumn FROM $table WHERE $whereClause";
+
     $stmt = $conn->prepare($query);
     if (!$stmt) {
         throw new Exception("Prepare failed: " . $conn->error);
@@ -651,7 +681,8 @@ function getColumnFromDatabase(mysqli $conn, array $inputs, string $dataFromColu
  * @param string $query
  * @return bool
  */
-function writeDataToDatabase(mysqli $conn, array $inputs, string $query): bool {
+
+function writeToDatabase(mysqli $conn, array $inputs, string $query): bool {
     foreach ($inputs as &$input) {
         if (is_array($input)) {
             $input = json_encode($input);

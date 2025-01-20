@@ -1,10 +1,10 @@
 function toggleInfo(id) {
-    var infoField = document.getElementById(id);
+    let infoField = document.getElementById(id);
     infoField.style.display = (infoField.style.display === "block") ? "none" : "block";
 }
 
 document.addEventListener('click', function(event) {
-    var infoFields = document.querySelectorAll('.info-field');
+    let infoFields = document.querySelectorAll('.info-field');
     infoFields.forEach(function(infoField) {
         if (!infoField.contains(event.target) && !event.target.classList.contains('info-icon')) {
             infoField.style.display = 'none';
@@ -13,12 +13,12 @@ document.addEventListener('click', function(event) {
 });
 
 function openExternInfoSite(info) {
-    var url = "";
+    let url = "";
     switch(info) {
         case "BotToken":
             url = "https://niklas.craft.me/Untis-Benachrichtigungen-Anleitung/b/717766C2-54B5-48A3-8677-0BC20BB2221A/Slack-Bot-Token-generieren";
             break;
-        case "TageInVorraus":
+        case "TageInVoraus":
             url = "https://niklas.craft.me/Untis-Benachrichtigungen-Anleitung/b/594ADF73-6DE4-40AB-9B9A-A668C4A53721/F%C3%BCr-wie-viele-Tage-im-Voraus-m%C3%B6chtes";
             break;
         case "username":
@@ -35,8 +35,8 @@ function openExternInfoSite(info) {
     window.open(url, '_blank');
 }
 
-document.querySelector('form').addEventListener('submit', function(event) {
-    var schoolUrlInput = document.getElementById('schoolUrl');
+document.querySelector('form').addEventListener('submit', function() {
+    let schoolUrlInput = document.getElementById('schoolUrl');
     if (schoolUrlInput.value.trim() === '') {
         schoolUrlInput.value = schoolUrlInput.placeholder;
     }
@@ -46,14 +46,26 @@ document.querySelector('form').addEventListener('submit', function(event) {
 
 
 
+
 document.addEventListener('DOMContentLoaded', () => {
     const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (prefersDarkScheme) {
-        document.body.classList.add('dark-mode');
-    }
+    const currentTheme = localStorage.getItem('theme');
 
     const toggleButton = document.getElementById('toggle-theme');
+    const toggleIcon = toggleButton.querySelector('.dark-mode-switch-icon');
+
+    if (currentTheme === 'dark' || (prefersDarkScheme && currentTheme === null)) {
+        document.body.classList.add('dark-mode');
+        toggleIcon.classList.add('dark-mode-switch-icon-white');
+    } else if (currentTheme === 'light') {
+        document.body.classList.remove('dark-mode');
+        toggleIcon.classList.remove('dark-mode-switch-icon-white');
+    }
+
     toggleButton.addEventListener('click', () => {
         document.body.classList.toggle('dark-mode');
+        const theme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+        localStorage.setItem('theme', theme);
+        toggleIcon.classList.toggle('dark-mode-switch-icon-white');
     });
 });
