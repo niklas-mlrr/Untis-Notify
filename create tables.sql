@@ -1,22 +1,25 @@
 CREATE TABLE `users` (
-    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-    `username` VARCHAR(20) NOT NULL UNIQUE,
-    `password` VARCHAR(255) NOT NULL,
-    `slack_bot_token` VARCHAR(70) DEFAULT NULL,
-    `setup_complete` TINYINT(1) DEFAULT 0,
-    `notification_for_days_in_advance` INT(11) DEFAULT 14,
-    `last_login` DATETIME DEFAULT NULL,
-    `created` DATETIME DEFAULT CURRENT_TIMESTAMP,
-    `school_url` VARCHAR(100) DEFAULT NULL,
-    PRIMARY KEY (`id`)
-)
+    `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `username` varchar(20) NOT NULL,
+    `password` varchar(255) NOT NULL,
+    `slack_bot_token` varchar(70) DEFAULT NULL,
+    `setup_complete` tinyint(1) DEFAULT 0,
+    `notification_for_days_in_advance` int(11) DEFAULT 14,
+    `last_login` datetime DEFAULT NULL,
+    `created` datetime DEFAULT current_timestamp(),
+    `school_url` varchar(100) DEFAULT NULL,
+    `dictionary` varchar(300) DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `username` (`username`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `timetables` (
-    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-    `timetable_data` JSON NOT NULL,
-    `user` VARCHAR(20) NOT NULL,
-    `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `for_date` DATE NOT NULL,
+    `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `timetable_data` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`timetable_data`)),
+    `user` varchar(20) NOT NULL,
+    `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+    `for_date` date NOT NULL,
     PRIMARY KEY (`id`),
-    FOREIGN KEY (`user`) REFERENCES `users`(`username`) ON DELETE CASCADE
-)
+    KEY `user` (`user`),
+    CONSTRAINT `timetables_ibfk_1` FOREIGN KEY (`user`) REFERENCES `users` (`username`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=159 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
