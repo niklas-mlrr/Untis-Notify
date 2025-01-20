@@ -1,8 +1,15 @@
 <?php
-require "functions.php";
+require_once "functions.php";
 
-$conn = connectToDatabase();
-$users = getRowsFromDatabase($conn, [1], "SELECT * FROM users WHERE setup_complete = ?");
+
+try {
+    $conn = connectToDatabase();
+    $users = getRowsFromDatabase($conn, "users", ["setup_complete" => 1]);
+} catch (Exception $e) {
+    echo "Error: " . $e->getMessage();
+    exit();
+}
+
 
 foreach ($users as $user) {
     $username = $user['username'];

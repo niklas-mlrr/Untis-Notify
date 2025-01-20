@@ -3,6 +3,7 @@
 <head>
     <title>Untis Notify</title>
     <meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="logo.svg" type="image/x-icon">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -10,23 +11,39 @@
 <?php
 session_start();
 
+
 $username = $_POST['username'] ?? null;
 $password = $_POST['password'] ?? null;
 $schoolUrl = $_POST['schoolUrl'] ?? null;
 
 if ($username && $password && $schoolUrl) {
-    require "functions.php";
+    require_once "functions.php";
 
 
     $login = loginToWebUntis($username, $password, $schoolUrl);
     if ($login) {
 
-        $conn = connectToDatabase();
+        try {
+            $conn = connectToDatabase();
+        } catch (Exception $e) {
+            echo $e->getMessage();
+            exit();
+        }
 
-        $isUserInDatabase = !empty(getRowsFromDatabase($conn, [$username, $password], "SELECT * FROM users WHERE username = ? AND password = ?"));
+        try {
+            $isUserInDatabase = !empty(getRowsFromDatabase($conn, "users", ["username" => $username, "password" => $password]));
+        } catch (Exception $e) {
+            echo $e->getMessage();
+            exit();
+        }
 
         if (!$isUserInDatabase) {
-            writeDataToDatabase($conn, [$username, $password, $schoolUrl], "INSERT INTO users (username, password, school_url) VALUES (?, ?, ?)");
+            try {
+                writeToDatabase($conn, [$username, $password, $schoolUrl], "INSERT INTO users (username, password, school_url) VALUES (?, ?, ?)");
+            } catch (Exception $e) {
+                echo $e->getMessage();
+                exit();
+            }
         }
 
         $_SESSION['username'] = $username;
@@ -37,7 +54,12 @@ if ($username && $password && $schoolUrl) {
 
         date_default_timezone_set('Europe/Berlin');
         $currentTimestamp = date('Y-m-d h:i:s', time());
-        writeDataToDatabase($conn, [$currentTimestamp, $username], "UPDATE users SET last_login = ? WHERE username = ?");
+        try {
+            writeToDatabase($conn, [$currentTimestamp, $username], "UPDATE users SET last_login = ? WHERE username = ?");
+        } catch (Exception $e) {
+            echo $e->getMessage();
+            exit();
+        }
 
         $conn->close();
         header("Location: settings.php");
@@ -56,7 +78,7 @@ if ($username && $password && $schoolUrl) {
 <div class="img-div">
     <img class="notification-img" src="notification example.png" alt="Notification Example">
 </div>
-<br><br><br><br>
+<br><br>
 <p class="notification-text">↑ Beispiel einer Benachrichtigung ↑</p>
 
 
@@ -75,22 +97,24 @@ if ($username && $password && $schoolUrl) {
         <label for="schoolUrl">Schul-URL:</label>
         <div class="label-container">
             <input type="text" id="schoolUrl" name="schoolUrl" placeholder="https://niobe.webuntis.com/WebUntis/jsonrpc.do?school=gym-osterode">
-            <span class="info-icon" onclick="toggleInfo('info-schoolUrl')">?</span>
+            <span class="info-icon" onclick="toggleInfo('info-schoolUrl')" onKeyDown="toggleInfo('info-schoolUrl')">?</span>
         </div>
-        <div class="info-field" id="info-schoolUrl">Wenn du auf dem TRG bist, muss hier nichts eingegeben werden. <br> Dies ist eine schulspezifische URL.</div>
+        <div class="info-field" id="info-schoolUrl">
+            <p>Dies ist eine schulspezifische URL. <br> Wenn du auf dem TRG bist, musst du hier nichts eingeben.</p>
+        </div>
         <br>
 
         <label for="username">Untis Benutzername:</label>
         <div class="label-container">
             <input type="text" id="username" name="username" required>
-            <span class="info-icon" onclick="openExternInfoSite('username')">?</span>
+            <span class="info-icon" onclick="openExternInfoSite('username')" onKeyDown="openExternInfoSite('username')">?</span>
         </div>
         <br>
 
         <label for="password">Untis Passwort:</label>
         <div class="label-container">
             <input type="password" id="password" name="password" required>
-            <span class="info-icon" onclick="openExternInfoSite('password')">?</span>
+            <span class="info-icon" onclick="openExternInfoSite('password')" onKeyDown="openExternInfoSite('password')">?</span>
         </div>
         <br>
 

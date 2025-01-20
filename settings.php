@@ -3,6 +3,7 @@
 <head>
     <title>Einstellungen</title>
     <meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="logo.svg" type="image/x-icon">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -10,63 +11,41 @@
 <?php
 session_start();
 
-require "functions.php";
+require_once "functions.php";
 
 $username = $_SESSION['username'] ?? null;
 $password = $_SESSION['password'] ?? null;
 $conn = connectToDatabase();
 
-$slackBotToken = getColumnFromDatabase($conn, [$username], "slack_bot_token", "SELECT slack_bot_token FROM users WHERE username = ?");
-$dictionary = getColumnFromDatabase($conn, [$username], "dictionary", "SELECT dictionary FROM users WHERE username = ?");
-$notificationForDaysInAdvance = getColumnFromDatabase($conn, [$username], "notification_for_days_in_advance", "SELECT notification_for_days_in_advance FROM users WHERE username = ?");
+$slackBotToken = getValueFromDatabase($conn, "users", "slack_bot_token", ["username" => $username]);
+
+$dictionary = getValueFromDatabase($conn, "users", "dictionary", ["username" => $username]);
+$notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username]);
 
 
 $btnResponse = '';
-$newSlackBotToken = false;
-$newDictionary = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if(!empty($_POST['slackBotToken'])) {
-        $slackBotToken = $_POST['slackBotToken'];
-        $newSlackBotToken = true;
-    }
-    if(!empty($_POST['dictionary'])) {
-        $dictionary = $_POST['dictionary'];
-        $newDictionary = true;
-    }
-
+    $slackBotToken = $_POST['slackBotToken'] ?? $slackBotToken;
+    $dictionary = $_POST['dictionary'] ?? $dictionary;
     $notificationForDaysInAdvance = $_POST['notificationDays'] ?? $notificationForDaysInAdvance;
 
 
-    if($newSlackBotToken){
-        if(writeDataToDatabase($conn, [$slackBotToken, $notificationForDaysInAdvance, $username], "UPDATE users SET slack_bot_token = ?, notification_for_days_in_advance = ? WHERE username = ?")){
-            $btnResponse = getMessageText("settingsSavedSuccessfully");
-        } else {
-            $btnResponse = getMessageText("settingsNotSaved");
-        }
-        $newSlackBotToken = false;
-    }
-
-    if($newDictionary){
-        if(writeDataToDatabase($conn, [$dictionary, $notificationForDaysInAdvance, $username], "UPDATE users SET dictionary = ?, notification_for_days_in_advance = ? WHERE username = ?")){
-            $btnResponse = getMessageText("settingsSavedSuccessfully");
-        } else {
-            $btnResponse = getMessageText("settingsNotSaved");
-        }
-        $newDictionary = false;
-    }
-
-    if ($notificationForDaysInAdvance){
-        if(writeDataToDatabase($conn, [$notificationForDaysInAdvance, $username], "UPDATE users SET notification_for_days_in_advance = ? WHERE username = ?")){
-            $btnResponse = getMessageText("settingsSavedSuccessfully");
-        } else {
-            $btnResponse = getMessageText("settingsNotSaved");
-        }
+    if(writeToDatabase($conn, [$slackBotToken, $dictionary, $notificationForDaysInAdvance, $username], "UPDATE users SET slack_bot_token = ?, dictionary = ?, notification_for_days_in_advance = ? WHERE username = ?")){
+        $btnResponse = getMessageText("settingsSavedSuccessfully");
+    } else {
+        $btnResponse = getMessageText("settingsNotSaved");
     }
     $conn->close();
 }
+
+
 $conn = connectToDatabase();
-generateReplacementArray($conn, $username);
-//initiateCheck($conn, $username, $password);
+
+initiateCheck($conn, $username, $password);
+
+
+
+
 
 if (isset($_POST['action'])) {
     $conn = connectToDatabase();
@@ -75,7 +54,7 @@ if (isset($_POST['action'])) {
             logOut();
             break;
         case 'deleteAccount':
-            if (writeDataToDatabase($conn, [$username], "DELETE FROM users WHERE username = ?")) {
+            if (writeToDatabase($conn, [$username], "DELETE FROM users WHERE username = ?")) {
                 $btnResponse = getMessageText("accountDeletedSuccessfully");
                 sleep(2);
                 $conn->close();
@@ -86,13 +65,13 @@ if (isset($_POST['action'])) {
             break;
         case 'testNotification':
 
-            $testNotificationAusfall = sendslackMessage("ausfall", "Testbenachrichtigung für den Channel ausfall", "Test", "");
-            $testNotificationRaumänderung = sendslackMessage("raumänderung", "Testbenachrichtigung für den Channel raumänderung", "Test", "");
-            $testNotificationVertretung = sendslackMessage("vertretung", "Testbenachrichtigung für den Channel vertretung", "Test", "");
+            $testNotificationAusfall = sendslackMessage("ausfall", "Testbenachrichtigung für den Channel ausfall", " ", "");
+            $testNotificationRaumänderung = sendslackMessage("raumänderung", "Testbenachrichtigung für den Channel raumänderung", " ", "");
+            $testNotificationVertretung = sendslackMessage("vertretung", "Testbenachrichtigung für den Channel vertretung", " ", "");
             $testNotificationSonstiges = sendslackMessage("sonstiges", "Testbenachrichtigung für den Channel sonstiges", "Wenn du das hier liest, hast du alles richtig gemacht! (Solange auf der Website \"Alle 4 Testbenachrichtigungen erfolgreich gesendet\" stand.) Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind. Nun kannst du die Slack App überall dort installieren und dich anmelden, wo du benachrichtigt werden möchtest (Handy, iPad, usw.). In Einzelfällen (z.B. wenn bei Untis durch eine spezielle Veranstalltung aufeinmal 2 \"Fächer\" für eine Stunde eingetragen sind und die Stunde somit vertikal in der Mitte geteilt ist) kann es sein, dass nicht alles richtig verarbeitet werden kann. Bei Fehlern oder Fragen mir gerne schreiben.", "");
 
             if ($testNotificationAusfall && $testNotificationRaumänderung && $testNotificationVertretung && $testNotificationSonstiges) {
-                if (writeDataToDatabase($conn, [$username], "UPDATE users SET setup_complete = true WHERE username = ?")) {
+                if (writeToDatabase($conn, [$username], "UPDATE users SET setup_complete = true WHERE username = ?")) {
                     $btnResponse = getMessageText("testNotificationAllSent");
                 }
             } elseif(!$testNotificationSonstiges && !$testNotificationVertretung && !$testNotificationRaumänderung && !$testNotificationAusfall) {
@@ -125,23 +104,23 @@ if (isset($_POST['action'])) {
 
         <label for="slackBotToken">Slack Bot Token:</label>
         <div class="label-container">
-            <input type="text" id="slackBotToken" name="slackBotToken" placeholder="<?php echo $slackBotToken; ?>">
-            <span class="info-icon" onclick="openExternInfoSite('BotToken')">?</span>
+            <input type="text" id="slackBotToken" name="slackBotToken" value="<?php echo $slackBotToken; ?>" placeholder="xoxb-...">
+            <span class="info-icon" onclick="openExternInfoSite('BotToken')" onKeyDown="openExternInfoSite('BotToken')">?</span>
         </div>
         <br><br>
 
         <label for="dictionary">Dictionary (optional):</label>
         <div class="label-container">
-            <input type="text" id="dictionary" name="dictionary" placeholder="<?php echo $dictionary; ?>">
-            <span class="info-icon" onclick="openExternInfoSite('dictionary')">?</span>
+            <input type="text" id="dictionary" name="dictionary" value="<?php echo $dictionary; ?>" placeholder="ph1E=Physik; ch2E=Chemie; la1E=Latein">
+            <span class="info-icon" onclick="openExternInfoSite('dictionary')" onKeyDown="openExternInfoSite('dictionary')">?</span>
         </div>
         <br><br>
 
         <label for="notificationDays">Wie viele Tage im Voraus sollen auf Änderungen geprüft werden?</label>
         <div class="label-container">
-            <input type="range" id="notificationDays" name="notificationDays" min="1" max="30" value="<?php echo $notificationForDaysInAdvance; ?>" oninput="this.nextElementSibling.value = this.value">
+            <input type="range" id="notificationDays" name="notificationDays" min="0" max="30" value="<?php echo $notificationForDaysInAdvance; ?>" oninput="this.nextElementSibling.value = this.value">
             <output><?php echo $notificationForDaysInAdvance; ?></output>
-            <span class="info-icon" onclick="openExternInfoSite('TageInVorraus')">?</span>
+            <span class="info-icon" onclick="openExternInfoSite('TageInVoraus')" onKeyDown="openExternInfoSite('TageInVoraus')">?</span>
         </div>
         <br><br>
         <button class="btn-save-settings btn" type="submit">Einstellungen speichern</button>
