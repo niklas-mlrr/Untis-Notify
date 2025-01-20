@@ -13,6 +13,6 @@ Ein Benachrichtigungsservice für Stundenplanänderungen bei Untis.
 
 ### Darkmode:
 <div width="1000px">
-  <img src="https://github.com/user-attachments/assets/810296a1-5d42-4375-b568-f218d6dda284" width="420px"/>
-  <img src="https://github.com/user-attachments/assets/a2f6dcaf-6a4b-4d61-a97a-cd6362eba5a7" width="420px"/> 
+  <img src="https://github.com/user-attachments/assets/810296a1-5d42-4375-b568-f218d6dda284" width="400px"/>
+  <img src="https://github.com/user-attachments/assets/a2f6dcaf-6a4b-4d61-a97a-cd6362eba5a7" width="400px"/> 
 </div>
