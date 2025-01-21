@@ -1,7 +1,8 @@
 CREATE TABLE `users` (
     `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
     `username` varchar(20) NOT NULL,
-    `password` varchar(255) NOT NULL,
+    `password_cipher` varchar(255) NOT NULL,
+    `password_hash` varchar(255) NOT NULL,
     `slack_bot_token` varchar(70) DEFAULT NULL,
     `setup_complete` tinyint(1) DEFAULT 0,
     `notification_for_days_in_advance` int(11) DEFAULT 14,
@@ -11,7 +12,8 @@ CREATE TABLE `users` (
     `dictionary` varchar(300) DEFAULT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 
 CREATE TABLE `timetables` (
     `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -22,4 +24,4 @@ CREATE TABLE `timetables` (
     PRIMARY KEY (`id`),
     KEY `user` (`user`),
     CONSTRAINT `timetables` FOREIGN KEY (`user`) REFERENCES `users` (`username`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=159 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

@@ -65,6 +65,7 @@ body.dark-mode {
 form {
     background-color: var(--form-background-color);
     padding: 25px;
+    padding-top: 10px;
     border-radius: 5px;
     box-shadow: 0 0 10px var(--form-box-shadow);
     max-width: 85%;
@@ -242,10 +243,11 @@ input[type="submit"] {
     background: none;
     border: none;
 
-    position: relative;
-    top: -20px;
-    left: -50%;
+    position: absolute;
+    top: 30px;
+    left: -0.5%;
     cursor: pointer;
+    z-index: 100;
 }
 
 
