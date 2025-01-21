@@ -30,8 +30,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $notificationForDaysInAdvance = $_POST['notificationDays'] ?? $notificationForDaysInAdvance;
 
 
-    if(writeToDatabase($conn, [$slackBotToken, $dictionary, $notificationForDaysInAdvance, $username], "UPDATE users SET slack_bot_token = ?, dictionary = ?, notification_for_days_in_advance = ? WHERE username = ?")){
-        $btnResponse = getMessageText("settingsSavedSuccessfully");
+    if(updateDatabase($conn, "users", ["slack_bot_token", "dictionary", "notification_for_days_in_advance"], ["username = ?"], [$slackBotToken, $dictionary, $notificationForDaysInAdvance, $username])){
+    //if(writeToDatabase($conn, [$slackBotToken, $dictionary, $notificationForDaysInAdvance, $username], "UPDATE users SET slack_bot_token = ?, dictionary = ?, notification_for_days_in_advance = ? WHERE username = ?")){
+
+            $btnResponse = getMessageText("settingsSavedSuccessfully");
     } else {
         $btnResponse = getMessageText("settingsNotSaved");
     }
@@ -47,6 +49,9 @@ initiateCheck($conn, $username, $password);
 
 
 
+
+
+
 if (isset($_POST['action'])) {
     $conn = connectToDatabase();
     switch ($_POST['action']) {
@@ -54,7 +59,7 @@ if (isset($_POST['action'])) {
             logOut();
             break;
         case 'deleteAccount':
-            if (writeToDatabase($conn, [$username], "DELETE FROM users WHERE username = ?")) {
+            if (deleteFromDatabase($conn, "users", ["username = ?"], [$username])) {
                 $btnResponse = getMessageText("accountDeletedSuccessfully");
                 sleep(2);
                 $conn->close();
@@ -71,7 +76,7 @@ if (isset($_POST['action'])) {
             $testNotificationSonstiges = sendslackMessage("sonstiges", "Testbenachrichtigung für den Channel sonstiges", "Wenn du das hier liest, hast du alles richtig gemacht! (Solange auf der Website \"Alle 4 Testbenachrichtigungen erfolgreich gesendet\" stand.) Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind. Nun kannst du die Slack App überall dort installieren und dich anmelden, wo du benachrichtigt werden möchtest (Handy, iPad, usw.). In Einzelfällen (z.B. wenn bei Untis durch eine spezielle Veranstalltung aufeinmal 2 \"Fächer\" für eine Stunde eingetragen sind und die Stunde somit vertikal in der Mitte geteilt ist) kann es sein, dass nicht alles richtig verarbeitet werden kann. Bei Fehlern oder Fragen mir gerne schreiben.", "");
 
             if ($testNotificationAusfall && $testNotificationRaumänderung && $testNotificationVertretung && $testNotificationSonstiges) {
-                if (writeToDatabase($conn, [$username], "UPDATE users SET setup_complete = true WHERE username = ?")) {
+                if (updateDatabase($conn, "users", ["setup_complete"], ["username = ?"], [true, $username])){
                     $btnResponse = getMessageText("testNotificationAllSent");
                 }
             } elseif(!$testNotificationSonstiges && !$testNotificationVertretung && !$testNotificationRaumänderung && !$testNotificationAusfall) {
@@ -94,11 +99,11 @@ if (isset($_POST['action'])) {
 <div class="parent">
 
 
-    <button id="toggle-theme" class="dark-mode-switch-btn">
-        <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
-    </button>
 
     <form action="settings.php" method="post">
+        <button id="toggle-theme" class="dark-mode-switch-btn">
+            <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
+        </button>
         <h2>Einstellungen</h2>
         <br>
 
