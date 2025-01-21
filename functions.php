@@ -21,8 +21,9 @@ function initiateCheck($conn, $username, $password) {
 
     $currentDate = date("Ymd");
     $maxDateToCheck = date("Ymd", strtotime("+$notificationForDaysInAdvance days"));
-    writeToDatabase($conn, [$currentDate], "DELETE FROM timetables WHERE for_Date < ?");    // Delete old timetables
-    writeToDatabase($conn, [$maxDateToCheck, $username], "DELETE FROM timetables WHERE for_Date > ? AND user = ?");    // Delete timetables that are outside the notification range
+    deleteFromDatabase($conn, "timetables", ["for_date < ?"], [$currentDate]);    // Delete old timetables
+    deleteFromDatabase($conn, "timetables", ["for_Date > ?", "user = ?"], [$maxDateToCheck, $username]); // Delete timetables that are outside the notification range
+
 
     for ($i = 0; $i < $notificationForDaysInAdvance; $i++) {
         $date = date("Ymd", strtotime("+$i days"));
@@ -39,7 +40,7 @@ function initiateCheck($conn, $username, $password) {
 
 
         if (!$lastRetrieval && $formatedTimetable != null) {
-            writeToDatabase($conn, [$formatedTimetable, $date, $username], "INSERT INTO timetables (timetable_data, for_Date, user) VALUES (?, ?, ?)");
+            insertIntoDatabase($conn, "timetables", ["timetable_data", "for_date", "user"], [$formatedTimetable, $date, $username]);
             continue;
         } elseif (!$lastRetrieval && $formatedTimetable == null) {
             continue;
@@ -52,7 +53,7 @@ function initiateCheck($conn, $username, $password) {
 
         // Update the database with the new timetable
         if ($compResult) {
-            writeToDatabase($conn, [$formatedTimetable, $date, $username], "UPDATE timetables SET timetable_data = ? WHERE for_Date = ? AND user = ?");
+            updateDatabase($conn, "timetables", ["timetable_data"], ["for_Date = ?", "user = ?"], [$formatedTimetable, $date, $username]);
         }
     }
 }
@@ -597,7 +598,9 @@ function connectToDatabase(): mysqli {
     $conn = new mysqli($servername, $username, $password, $database);
     if ($conn->connect_error) {
         throw new Exception("Connection failed: " . $conn->connect_error);
+
     }
+
 
     return $conn;
 }
@@ -644,6 +647,7 @@ function getRowsFromDatabase(mysqli $conn, string $table, array $inputsAndCondit
  * @param string $query
  * @return string|null
  */
+
 function getValueFromDatabase(mysqli $conn, string $table, string $dataFromColumn, array $inputsAndConditions): ?string {
     $conditions = [];
     $inputs = [];
@@ -682,12 +686,43 @@ function getValueFromDatabase(mysqli $conn, string $table, string $dataFromColum
  * @return bool
  */
 
-function writeToDatabase(mysqli $conn, array $inputs, string $query): bool {
+function updateDatabase(mysqli $conn, string $table, array $columnsToUpdate, array $whereClauses, array $inputs): bool {
     foreach ($inputs as &$input) {
         if (is_array($input)) {
             $input = json_encode($input);
         }
     }
+
+    $columnsToUpdate = implode(' = ?, ', $columnsToUpdate) . ' = ?';
+    $whereClauses = implode(' AND ', $whereClauses);
+    $query = "UPDATE $table SET $columnsToUpdate WHERE $whereClauses";
+
+    $types = str_repeat('s', count($inputs));
+    $stmt = $conn->prepare($query);
+    if (!$stmt) {
+        throw new Exception("Prepare failed: " . $conn->error);
+    }
+
+    $stmt->bind_param($types, ...$inputs);
+
+    if ($stmt->execute()) {
+        $stmt->close();
+        return true;
+    } else {
+        $stmt->close();
+        return false;
+    }
+}
+
+function deleteFromDatabase(mysqli $conn, string $table, array $whereClauses, array $inputs): bool {
+    foreach ($inputs as &$input) {
+        if (is_array($input)) {
+            $input = json_encode($input);
+        }
+    }
+
+    $whereClauses = implode(' AND ', $whereClauses);
+    $query = "DELETE FROM $table WHERE $whereClauses";
 
     $types = str_repeat('s', count($inputs));
     $stmt = $conn->prepare($query);
@@ -707,4 +742,36 @@ function writeToDatabase(mysqli $conn, array $inputs, string $query): bool {
 }
 
 
+function insertIntoDatabase(mysqli $conn, string $table, array $column, array $inputs): bool {
 
+    foreach ($inputs as &$input) {
+        if (is_array($input)) {
+            $input = json_encode($input);
+        }
+    }
+
+    $questionmarks = str_repeat('?, ', count($inputs)-1);
+    $questionmarks .= '?';
+
+    $column = implode(', ', $column);
+
+    $query = "INSERT INTO $table ($column) VALUES ($questionmarks)";
+
+
+
+    $types = str_repeat('s', count($inputs));
+    $stmt = $conn->prepare($query);
+    if (!$stmt) {
+        throw new Exception("Prepare failed: " . $conn->error);
+    }
+
+    $stmt->bind_param($types, ...$inputs);
+
+    if ($stmt->execute()) {
+        $stmt->close();
+        return true;
+    } else {
+        $stmt->close();
+        return false;
+    }
+}

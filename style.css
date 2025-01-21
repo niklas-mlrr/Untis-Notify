@@ -59,6 +59,7 @@ body.dark-mode {
     max-width: 350px;
     z-index: 1;
     position: relative;
+    margin-top: 60px;
 }
 
 form {
@@ -227,6 +228,7 @@ input[type="submit"] {
 
     .parent {
         width: 90%;
+        margin-top: 35px;
     }
 }
 
@@ -241,8 +243,8 @@ input[type="submit"] {
     border: none;
 
     position: relative;
-    top: 75px;
-    left: -42.7%;
+    top: -20px;
+    left: -50%;
     cursor: pointer;
 }
 
