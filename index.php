@@ -23,39 +23,27 @@ if ($username && $password && $schoolUrl) {
     $login = loginToWebUntis($username, $password, $schoolUrl);
     if ($login) {
 
+
         try {
+
             $conn = connectToDatabase();
-        } catch (Exception $e) {
-            echo $e->getMessage();
-            exit();
-        }
-
-        try {
             $isUserInDatabase = !empty(getRowsFromDatabase($conn, "users", ["username" => $username, "password" => $password]));
-        } catch (Exception $e) {
-            echo $e->getMessage();
-            exit();
-        }
 
-        if (!$isUserInDatabase) {
-            try {
-                writeToDatabase($conn, [$username, $password, $schoolUrl], "INSERT INTO users (username, password, school_url) VALUES (?, ?, ?)");
-            } catch (Exception $e) {
-                echo $e->getMessage();
-                exit();
+            if (!$isUserInDatabase) {
+                    insertIntoDatabase($conn, "users", ["username", "password", "school_url"], [$username, $password, $schoolUrl]);
             }
-        }
 
-        $_SESSION['username'] = $username;
-        $_SESSION['password'] = $password;
-        $_SESSION['conn'] = $conn;
-        $_SESSION['schoolUrl'] = $schoolUrl;
+            $_SESSION['username'] = $username;
+            $_SESSION['password'] = $password;
+            $_SESSION['conn'] = $conn;
+            $_SESSION['schoolUrl'] = $schoolUrl;
 
 
-        date_default_timezone_set('Europe/Berlin');
-        $currentTimestamp = date('Y-m-d h:i:s', time());
-        try {
-            writeToDatabase($conn, [$currentTimestamp, $username], "UPDATE users SET last_login = ? WHERE username = ?");
+            date_default_timezone_set('Europe/Berlin');
+            $currentTimestamp = date('Y-m-d h:i:s', time());
+            updateDatabase($conn, "users", ["last_login"], ["username = ?"], [$currentTimestamp, $username]);
+            //"UPDATE users SET last_login = ? WHERE username = ?");
+
         } catch (Exception $e) {
             echo $e->getMessage();
             exit();
@@ -84,11 +72,11 @@ if ($username && $password && $schoolUrl) {
 
 <div class="parent">
 
-    <button id="toggle-theme" class="dark-mode-switch-btn">
-        <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
-    </button>
 
     <form action="index.php" method="post">
+        <button id="toggle-theme" class="dark-mode-switch-btn">
+            <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
+        </button>
         <h2>Untis Notify</h2>
         <h4>- Benachrichtigungen für Untis -</h4>
         <p class="info-text">Die Einrichtung dauert einmalig ca. 15 Min. und benötigt ein Handy & Pc / Laptop</p>
