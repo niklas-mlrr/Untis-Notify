@@ -31,8 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
     if(updateDatabase($conn, "users", ["slack_bot_token", "dictionary", "notification_for_days_in_advance"], ["username = ?"], [$slackBotToken, $dictionary, $notificationForDaysInAdvance, $username])){
-    //if(writeToDatabase($conn, [$slackBotToken, $dictionary, $notificationForDaysInAdvance, $username], "UPDATE users SET slack_bot_token = ?, dictionary = ?, notification_for_days_in_advance = ? WHERE username = ?")){
-
             $btnResponse = getMessageText("settingsSavedSuccessfully");
     } else {
         $btnResponse = getMessageText("settingsNotSaved");
@@ -44,8 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $conn = connectToDatabase();
 
 initiateCheck($conn, $username, $password);
-
-
 
 
 
@@ -70,10 +66,10 @@ if (isset($_POST['action'])) {
             break;
         case 'testNotification':
 
-            $testNotificationAusfall = sendslackMessage("ausfall", "Testbenachrichtigung für den Channel ausfall", " ", "");
-            $testNotificationRaumänderung = sendslackMessage("raumänderung", "Testbenachrichtigung für den Channel raumänderung", " ", "");
-            $testNotificationVertretung = sendslackMessage("vertretung", "Testbenachrichtigung für den Channel vertretung", " ", "");
-            $testNotificationSonstiges = sendslackMessage("sonstiges", "Testbenachrichtigung für den Channel sonstiges", "Wenn du das hier liest, hast du alles richtig gemacht! (Solange auf der Website \"Alle 4 Testbenachrichtigungen erfolgreich gesendet\" stand.) Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind. Nun kannst du die Slack App überall dort installieren und dich anmelden, wo du benachrichtigt werden möchtest (Handy, iPad, usw.). In Einzelfällen (z.B. wenn bei Untis durch eine spezielle Veranstalltung aufeinmal 2 \"Fächer\" für eine Stunde eingetragen sind und die Stunde somit vertikal in der Mitte geteilt ist) kann es sein, dass nicht alles richtig verarbeitet werden kann. Bei Fehlern oder Fragen mir gerne schreiben.", "");
+            $testNotificationAusfall = sendslackMessage($username, "ausfall", "Testbenachrichtigung für den Channel ausfall", " ", "");
+            $testNotificationRaumänderung = sendslackMessage($username, "raumänderung", "Testbenachrichtigung für den Channel raumänderung", " ", "");
+            $testNotificationVertretung = sendslackMessage($username, "vertretung", "Testbenachrichtigung für den Channel vertretung", " ", "");
+            $testNotificationSonstiges = sendslackMessage($username, "sonstiges", "Testbenachrichtigung für den Channel sonstiges", "Wenn du das hier liest, hast du alles richtig gemacht! (Solange auf der Website \"Alle 4 Testbenachrichtigungen erfolgreich gesendet\" stand.) Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind. Nun kannst du die Slack App überall dort installieren und dich anmelden, wo du benachrichtigt werden möchtest (Handy, iPad, usw.). In Einzelfällen (z.B. wenn bei Untis durch eine spezielle Veranstalltung aufeinmal 2 \"Fächer\" für eine Stunde eingetragen sind und die Stunde somit vertikal in der Mitte geteilt ist) kann es sein, dass nicht alles richtig verarbeitet werden kann. Bei Fehlern oder Fragen mir gerne schreiben.", "");
 
             if ($testNotificationAusfall && $testNotificationRaumänderung && $testNotificationVertretung && $testNotificationSonstiges) {
                 if (updateDatabase($conn, "users", ["setup_complete"], ["username = ?"], [true, $username])){
