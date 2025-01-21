@@ -21,5 +21,5 @@ CREATE TABLE `timetables` (
     `for_date` date NOT NULL,
     PRIMARY KEY (`id`),
     KEY `user` (`user`),
-    CONSTRAINT `timetables_ibfk_1` FOREIGN KEY (`user`) REFERENCES `users` (`username`) ON DELETE CASCADE
+    CONSTRAINT `timetables` FOREIGN KEY (`user`) REFERENCES `users` (`username`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=159 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
