@@ -6,6 +6,12 @@ function initiateCheck($conn, $username, $password) {
 
 
     $schoolUrl = getValueFromDatabase($conn, "users", "school_url", ["username" => $username]);
+
+    if (!$username){
+        header("Location: index.php");
+        exit();
+    }
+
     $login = loginToWebUntis($username, $password, $schoolUrl);
 
     if (!$login) {
@@ -22,7 +28,7 @@ function initiateCheck($conn, $username, $password) {
     $currentDate = date("Ymd");
     $maxDateToCheck = date("Ymd", strtotime("+$notificationForDaysInAdvance days"));
     deleteFromDatabase($conn, "timetables", ["for_date < ?"], [$currentDate]);    // Delete old timetables
-    deleteFromDatabase($conn, "timetables", ["for_Date > ?", "user = ?"], [$maxDateToCheck, $username]); // Delete timetables that are outside the notification range
+    deleteFromDatabase($conn, "timetables", ["for_Date >= ?", "user = ?"], [$maxDateToCheck, $username]); // Delete timetables that are outside the notification range
 
 
     for ($i = 0; $i < $notificationForDaysInAdvance; $i++) {
@@ -47,7 +53,7 @@ function initiateCheck($conn, $username, $password) {
         }
 
 
-        $compResult = compareArrays($lastRetrieval, $formatedTimetable, $date);
+        $compResult = compareArrays($lastRetrieval, $formatedTimetable, $date, $username);
 
 
 
@@ -71,8 +77,8 @@ function initiateCheck($conn, $username, $password) {
  * @param string $date The date to which the message refers
  * @return bool Whether the message was sent successfully
  */
-function sendslackMessage($channel, $title, $message, $date): bool {
-    global $username, $conn;
+function sendslackMessage($username, $channel, $title, $message, $date): bool {
+    global $conn;
     $url = 'https://slack.com/api/chat.postMessage';
 
 
@@ -173,13 +179,36 @@ switch (date('w', strtotime($date))) {
     $response_data = json_decode($response, true);
 
     if ($http_code !== 200 || !$response_data['ok']) {
+        logNotificationToFile(date('d-m-Y H:i:s'), $date, $username, $channel, $title, $message, $response_data);
         return false;
     }
 
+
+    logNotificationToFile(date('d-m-Y H:i:s'), $date, $username, $channel, $title, $message, "Benachrichtigung erfolgreich gesendet");
     return true;
 }
 
 
+
+
+function logNotificationToFile($dateSent, $forDate, $username, $channel, $title, $message, $error) {
+if(is_array($error)){
+    $error = json_encode($error);
+}
+    $logFile = 'notifications.log';
+    $logEntry = sprintf(
+        "[%s] ForDate: %s, Username: %s, Channel: %s, Title: %s, Message: %s, (Error): %s\n",
+        $dateSent,
+        $forDate,
+        $username,
+        $channel,
+        $title,
+        $message,
+        $error
+    );
+
+    file_put_contents($logFile, $logEntry, FILE_APPEND);
+}
 
 
 
@@ -221,6 +250,7 @@ function loginToWebUntis(string $username, string $password, string $schoolUrl):
         return $result['result']['sessionId'];
     }
     return "";
+
 }
 
 /**
@@ -460,9 +490,9 @@ function getFormatedTimetable($timetable, $replacements) {
  * @param $array2 (= formatedTimetable)
  * @return array|string
  */
-function compareArrays($array1, $array2, $date) {
+function compareArrays($array1, $array2, $date, $username) {
     $differences = findDifferences($array1, $array2);
-    sendSlackMessages($differences, $date);
+    sendSlackMessages($differences, $date, $username);
     return !empty($differences);
 }
 
@@ -524,9 +554,9 @@ function handleDifference($subKey, $value, $newValue, $item) {
     };
 }
 
-function sendSlackMessages($differences, $date) {
+function sendSlackMessages($differences, $date, $username) {
     foreach ($differences as $difference) {
-        sendslackMessage($difference['channel'], $difference['title'], $difference['message'], $date);
+        sendslackMessage($username, $difference['channel'], $difference['title'], $difference['message'], $date);
         //echo $difference['channel'] . ", " . $difference['title'] . ", " . $difference['message'] . ", " . $date . "<br>";
     }
 }
@@ -774,4 +804,67 @@ function insertIntoDatabase(mysqli $conn, string $table, array $column, array $i
         $stmt->close();
         return false;
     }
+}
+
+
+
+
+
+
+function encryptString($str) {
+    $config = require 'config.php';
+    $passwordEncryptionKey = $config['passwordEncryptionKey'];
+
+    $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
+    $encrypted = openssl_encrypt($str, "AES-256-CBC", $passwordEncryptionKey, 0, $iv);
+
+    return base64_encode($iv . $encrypted);
+}
+
+function decryptCipher($cipher) {
+    $config = require 'config.php';
+    $passwordEncryptionKey = $config['passwordEncryptionKey'];
+
+    $cipher = base64_decode($cipher);
+
+    $iv_length = openssl_cipher_iv_length('aes-256-cbc');
+    $iv = substr($cipher, 0, $iv_length);
+    $encrypted = substr($cipher, $iv_length);
+
+    return openssl_decrypt($encrypted, "AES-256-CBC", $passwordEncryptionKey, 0, $iv);
+}
+
+
+
+
+
+function encryptAndHashPassword($password) {
+    $encryptedPassword = encryptString($password);
+    $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+    return [$encryptedPassword, $passwordHash];
+}
+
+function authenticateEncryptedPassword($conn, $username, $inputPassword) {
+
+    $encryptedPassword = getValueFromDatabase($conn, "users", "password_cipher", ["username" => $username]);
+    $passwordHash = getValueFromDatabase($conn, "users", "password_hash", ["username" => $username]);
+
+    if (!$encryptedPassword || !$passwordHash) {
+        return false; // Benutzer nicht gefunden oder Hash nicht vorhanden
+    }
+
+    // Passwort-Hash überprüfen
+    if (!password_verify($inputPassword, $passwordHash)) {
+        return false; // Authentifizierung fehlgeschlagen
+    }
+
+    // Passwort entschlüsseln
+    $decryptedPassword = decryptCipher($encryptedPassword);
+
+    // Passwort vergleichen
+        if($decryptedPassword === $inputPassword) {
+            return $decryptedPassword;
+        } else {
+            return false;
+        }
 }
