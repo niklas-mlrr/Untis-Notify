@@ -27,10 +27,11 @@ if ($username && $password && $schoolUrl) {
         try {
 
             $conn = connectToDatabase();
-            $isUserInDatabase = !empty(getRowsFromDatabase($conn, "users", ["username" => $username, "password" => $password]));
+            $isUserInDatabaseAndAuthenticated = authenticateEncryptedPassword($conn, $username, $password);
 
-            if (!$isUserInDatabase) {
-                    insertIntoDatabase($conn, "users", ["username", "password", "school_url"], [$username, $password, $schoolUrl]);
+            if (!$isUserInDatabaseAndAuthenticated) {
+                $passwordCipherAndHash = encryptAndHashPassword($password);
+                insertIntoDatabase($conn, "users", ["username", "password_cipher", "password_hash", "school_url"], [$username, $passwordCipherAndHash[0], $passwordCipherAndHash[1], $schoolUrl]);
             }
 
             $_SESSION['username'] = $username;
@@ -39,10 +40,8 @@ if ($username && $password && $schoolUrl) {
             $_SESSION['schoolUrl'] = $schoolUrl;
 
 
-            date_default_timezone_set('Europe/Berlin');
             $currentTimestamp = date('Y-m-d h:i:s', time());
             updateDatabase($conn, "users", ["last_login"], ["username = ?"], [$currentTimestamp, $username]);
-            //"UPDATE users SET last_login = ? WHERE username = ?");
 
         } catch (Exception $e) {
             echo $e->getMessage();
