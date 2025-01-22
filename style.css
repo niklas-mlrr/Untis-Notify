@@ -64,8 +64,7 @@ body.dark-mode {
 
 form {
     background-color: var(--form-background-color);
-    padding: 25px;
-    padding-top: 10px;
+    padding: 10px 25px 25px;
     border-radius: 5px;
     box-shadow: 0 0 10px var(--form-box-shadow);
     max-width: 85%;
@@ -232,7 +231,7 @@ input[type="submit"] {
         margin-top: 35px;
     }
     .parent-settings {
-        margin-top: 0px;
+        margin-top: 0;
     }
 }
 
