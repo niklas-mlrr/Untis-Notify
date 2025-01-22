@@ -23,15 +23,17 @@ if ($username && $password && $schoolUrl) {
     $login = loginToWebUntis($username, $password, $schoolUrl);
     if ($login) {
 
-
         try {
-
             $conn = connectToDatabase();
             $isUserInDatabaseAndAuthenticated = authenticateEncryptedPassword($conn, $username, $password);
 
             if (!$isUserInDatabaseAndAuthenticated) {
                 $passwordCipherAndHash = encryptAndHashPassword($password);
-                insertIntoDatabase($conn, "users", ["username", "password_cipher", "password_hash", "school_url"], [$username, $passwordCipherAndHash[0], $passwordCipherAndHash[1], $schoolUrl]);
+                if (empty(getRowsFromDatabase($conn, "users", ["username" => $username]))) {
+                    insertIntoDatabase($conn, "users", ["username", "password_cipher", "password_hash", "school_url"], [$username, $passwordCipherAndHash[0], $passwordCipherAndHash[1], $schoolUrl]);
+                } else {
+                    updateDatabase($conn, "users", ["password_cipher", "password_hash"], ["username = ?"], [$passwordCipherAndHash[0], $passwordCipherAndHash[1], $username]);
+                }
             }
 
             $_SESSION['username'] = $username;
