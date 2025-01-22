@@ -305,6 +305,7 @@ function getTimetable($sessionId, $userId, $date) {
 }
 
 
+
 /**
  * @param $sessionId
  * @return mixed
