@@ -45,8 +45,6 @@ document.querySelector('form').addEventListener('submit', function() {
 
 
 
-
-
 document.addEventListener('DOMContentLoaded', () => {
     const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const currentTheme = localStorage.getItem('theme');
