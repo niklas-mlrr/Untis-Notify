@@ -1,10 +1,10 @@
 function toggleInfo(id) {
-    var infoField = document.getElementById(id);
+    let infoField = document.getElementById(id);
     infoField.style.display = (infoField.style.display === "block") ? "none" : "block";
 }
 
 document.addEventListener('click', function(event) {
-    var infoFields = document.querySelectorAll('.info-field');
+    let infoFields = document.querySelectorAll('.info-field');
     infoFields.forEach(function(infoField) {
         if (!infoField.contains(event.target) && !event.target.classList.contains('info-icon')) {
             infoField.style.display = 'none';
@@ -13,31 +13,66 @@ document.addEventListener('click', function(event) {
 });
 
 function openExternInfoSite(info) {
-    var url = "";
+    let url = "";
     switch(info) {
-        case "ApiKey":
-            url = "https://pushover.net/apps/build";
+        case "BotToken":
+            url = "https://github.com/TechNikFuture/Untis-Notify/wiki/Slack-Bot-Token-generieren";
             break;
-        case "UserKey":
-            url = "https://pushover.net/apps/build";
-            break;
-        case "TageInVorraus":
-            url = "https://niklas.craft.me/Untis-Benachrichtigungen-Anleitung/b/594ADF73-6DE4-40AB-9B9A-A668C4A53721/F%C3%BCr-wie-viele-Tage-im-Voraus-m%C3%B6chtes";
+        case "TageInVoraus":
+            url = "https://github.com/TechNikFuture/Untis-Notify/wiki/Wie-viele-Tage-im-Voraus-sollen-auf-%C3%84nderungen-gepr%C3%BCft-werden%3F";
             break;
         case "username":
-            url = "https://niklas.craft.me/Untis-Benachrichtigungen-Anleitung/b/F4DD6474-D984-4B0C-87FC-F7C9D6CE5E11/Untis-Username-sehen";
+            url = "https://github.com/TechNikFuture/Untis-Notify/wiki/Untis-Benutzernamen-sehen";
             break;
         case "password":
-            url = "https://niklas.craft.me/Untis-Benachrichtigungen-Anleitung/b/880025AB-BCD2-428C-A36E-6FF4540F6E41/Untis-Passwort-%C3%A4ndern";
+            url = "https://github.com/TechNikFuture/Untis-Notify/wiki/Untis-Passwort-%C3%A4ndern";
+            break;
+        case "dictionary":
+            url = "https://github.com/TechNikFuture/Untis-Notify/wiki/Personalisierbares-Dictionary";
             break;
 
     }
     window.open(url, '_blank');
 }
 
-document.querySelector('form').addEventListener('submit', function(event) {
-    var schoolUrlInput = document.getElementById('schoolUrl');
+document.querySelector('form').addEventListener('submit', function() {
+    let schoolUrlInput = document.getElementById('schoolUrl');
     if (schoolUrlInput.value.trim() === '') {
         schoolUrlInput.value = schoolUrlInput.placeholder;
     }
 });
+
+
+
+
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const currentTheme = localStorage.getItem('theme');
+
+    const toggleButton = document.getElementById('toggle-theme');
+    const toggleIcon = toggleButton.querySelector('.dark-mode-switch-icon');
+
+    if (currentTheme === 'dark' || (prefersDarkScheme && currentTheme === null)) {
+        document.body.classList.add('dark-mode');
+        toggleIcon.classList.add('dark-mode-switch-icon-white');
+    } else if (currentTheme === 'light') {
+        document.body.classList.remove('dark-mode');
+        toggleIcon.classList.remove('dark-mode-switch-icon-white');
+    }
+
+    toggleButton.addEventListener('click', () => {
+        event.preventDefault(); // Verhindert das Standardverhalten des Buttons
+        console.log("test");
+        if(!window.location.href.includes("impressum.php")) {
+            document.body.classList.toggle('dark-mode');
+            const theme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+            localStorage.setItem('theme', theme);
+            toggleIcon.classList.toggle('dark-mode-switch-icon-white');
+        } else {
+            window.location.replace("index.php");
+        }
+    });
+});
+

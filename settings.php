@@ -37,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if(updateDatabase($conn, "users", ["slack_bot_token", "dictionary", "notification_for_days_in_advance"], ["username = ?"], [$slackBotToken, $dictionary, $notificationForDaysInAdvance, $username])){
         $btnResponse = getMessageText("settingsSavedSuccessfully");
+        initiateCheck($conn, $username, $password);
     } else {
         $btnResponse = getMessageText("settingsNotSaved");
     }

@@ -3,6 +3,7 @@
     --text-color: black;
     --header-background-color: lightgray;
     --button-background-color: #80c3f1;
+    --email-link-color: #479fdc;
     --form-background-color: #fff;
     --form-box-shadow: rgba(25, 25, 25, 0.1);
     --input-border-color: #ccc;
@@ -21,7 +22,6 @@ body {
     font-family: Arial, sans-serif;
     background-color: var(--background-color);
     color: var(--text-color);
-    font-size: 1.05em;
     margin: 0;
     padding: 0;
     display: flex;
@@ -39,6 +39,7 @@ body.dark-mode {
     --text-color: white;
     --header-background-color: darkgray;
     --button-background-color: #1f5880;
+    --email-link-color: #479fdc;
     --form-background-color: #333;
     --form-box-shadow: rgba(170, 170, 170, 0.1);
     --input-border-color: #555;
@@ -166,11 +167,11 @@ input[type="submit"] {
 
     font-size: 0.8em;
     width: 92.5%;
-    padding: 10px 10px 3px 3px;
-    -webkit-padding-before: 10px;
-    -webkit-padding-after: 10px;
+    padding: 3px;
+    -webkit-padding-before: 3px;
+    -webkit-padding-after: 3px;
 
-    margin-top: 5px;
+    margin: 0;
     border-radius: 5px;
 }
 
@@ -246,7 +247,7 @@ input[type="submit"] {
     border: none;
 
     position: absolute;
-    top: 30px;
+    top: 33px;
     left: -0.5%;
     cursor: pointer;
     z-index: 100;
@@ -260,4 +261,35 @@ input[type="submit"] {
 
 .dark-mode-switch-icon-white {
     filter: invert(1);
+}
+
+.navigate-back-icon {
+    width: 40px;
+    height: 40px;
+}
+
+.navigate-back-icon-white {
+    filter: invert(1);
+}
+
+
+
+.impressum{
+    margin-top: 50px;
+    padding: 20px;
+    background-color: var(--form-background-color);
+    border-top: 1px solid #ddd;
+}
+
+.impressum h3 {
+    margin-top: 0;
+}
+
+.impressum p {
+    margin: 5px 0;
+}
+
+.email {
+    color: var(--email-link-color);
+    text-decoration: none;
 }

@@ -3,7 +3,9 @@
 <head>
     <title>Untis Notify</title>
     <meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="logo.svg" type="image/x-icon">
+    <link rel="apple-touch-icon" href="logo.svg">
+    <link rel="icon" href="logo.svg" type="image/svg+xml">
+    <link rel="shortcut icon" href="logo.svg" type="image/x-icon">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -111,9 +113,11 @@ if ($username && $password && $schoolUrl) {
         <br><br>
         <?php echo $loginMessage; ?>
 
+        <a class="info-text" href="impressum.php">Impressum</a>
+
     </form>
 </div>
-
 </body>
+
 <script src="script.js"></script>
 </html>

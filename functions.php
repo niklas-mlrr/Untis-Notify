@@ -305,8 +305,6 @@ function getTimetable($sessionId, $userId, $date) {
 }
 
 
-
-
 /**
  * @param $sessionId
  * @return mixed
@@ -856,3 +854,4 @@ function authenticateEncryptedPassword($conn, $username, $inputPassword) {
             return false;
         }
 }
+
