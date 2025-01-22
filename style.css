@@ -231,6 +231,9 @@ input[type="submit"] {
         width: 90%;
         margin-top: 35px;
     }
+    .parent-settings {
+        margin-top: 0px;
+    }
 }
 
 .info-text {

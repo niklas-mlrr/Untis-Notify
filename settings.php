@@ -18,9 +18,14 @@ $password = $_SESSION['password'] ?? null;
 $conn = connectToDatabase();
 
 $slackBotToken = getValueFromDatabase($conn, "users", "slack_bot_token", ["username" => $username]);
-
 $dictionary = getValueFromDatabase($conn, "users", "dictionary", ["username" => $username]);
 $notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username]);
+
+
+
+initiateCheck($conn, $username, $password);
+
+
 
 
 $btnResponse = '';
@@ -31,20 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
     if(updateDatabase($conn, "users", ["slack_bot_token", "dictionary", "notification_for_days_in_advance"], ["username = ?"], [$slackBotToken, $dictionary, $notificationForDaysInAdvance, $username])){
-            $btnResponse = getMessageText("settingsSavedSuccessfully");
+        $btnResponse = getMessageText("settingsSavedSuccessfully");
     } else {
         $btnResponse = getMessageText("settingsNotSaved");
     }
     $conn->close();
 }
-
-
-$conn = connectToDatabase();
-
-initiateCheck($conn, $username, $password);
-
-
-
 
 
 
@@ -92,8 +89,7 @@ if (isset($_POST['action'])) {
 }
 ?>
 
-<div class="parent">
-
+<div class="parent parent-settings">
 
 
     <form action="settings.php" method="post">
