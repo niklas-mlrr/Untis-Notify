@@ -1,8 +1,6 @@
 # Untis Notify
 
-Ein Benachrichtigungsservice für Stundenplanänderungen bei Untis.
 
-<br></br>
 ## Screenshots
 
 ### Whitemode:
