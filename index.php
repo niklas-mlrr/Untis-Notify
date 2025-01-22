@@ -71,6 +71,7 @@ if ($username && $password && $schoolUrl) {
 <p class="notification-text">↑ Beispiel einer Benachrichtigung ↑</p>
 
 
+
 <div class="parent">
 
     <form action="index.php" method="post">
