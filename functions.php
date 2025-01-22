@@ -2,9 +2,6 @@
 
 
 function initiateCheck($conn, $username, $password) {
-
-
-
     $schoolUrl = getValueFromDatabase($conn, "users", "school_url", ["username" => $username]);
 
     if (!$username){
@@ -13,15 +10,12 @@ function initiateCheck($conn, $username, $password) {
     }
 
     $login = loginToWebUntis($username, $password, $schoolUrl);
-
     if (!$login) {
         return;
     }
 
     $students = getStudents($login);
-
-
-
+    
     $userId = getStudentIdByName($students, $username);
     $notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username]);
 
@@ -40,7 +34,7 @@ function initiateCheck($conn, $username, $password) {
 
 
         $lastRetrieval = getValueFromDatabase($conn, "timetables", "timetable_data", ["for_Date" => $date, "user" => $username]);
-        if($lastRetrieval){
+        if ($lastRetrieval){
             $lastRetrieval = json_decode($lastRetrieval, true);
         }
 
@@ -51,13 +45,11 @@ function initiateCheck($conn, $username, $password) {
         } elseif (!$lastRetrieval && $formatedTimetable == null) {
             continue;
         }
-
-
+        
         $compResult = compareArrays($lastRetrieval, $formatedTimetable, $date, $username);
 
-
-
-        // Update the database with the new timetable
+        
+        // Update the database with the new timetables
         if ($compResult) {
             updateDatabase($conn, "timetables", ["timetable_data"], ["for_Date = ?", "user = ?"], [$formatedTimetable, $date, $username]);
         }
@@ -84,37 +76,36 @@ function sendslackMessage($username, $channel, $title, $message, $date): bool {
 
     $botToken = getValueFromDatabase($conn, "users", "slack_bot_token", ["username" => $username]);
 
+    
+    switch (date('w', strtotime($date))) {
+        case 0:
+            $weekday = "So";
+            break;
+        case 1:
+            $weekday = "Mo";
+            break;
+        case 2:
+            $weekday = "Di";
+            break;
+        case 3:
+            $weekday = "Mi";
+            break;
+        case 4:
+            $weekday = "Do";
+            break;
+        case 5:
+            $weekday = "Fr";
+            break;
+        case 6:
+            $weekday = "Sa";
+            break;
+        default:
+            $weekday = " ";
+            break;
+    }
 
 
-switch (date('w', strtotime($date))) {
-    case 0:
-        $weekday = "So";
-        break;
-    case 1:
-        $weekday = "Mo";
-        break;
-    case 2:
-        $weekday = "Di";
-        break;
-    case 3:
-        $weekday = "Mi";
-        break;
-    case 4:
-        $weekday = "Do";
-        break;
-    case 5:
-        $weekday = "Fr";
-        break;
-    case 6:
-        $weekday = "Sa";
-        break;
-    default:
-        $weekday = " ";
-        break;
-}
-
-
-    $date = match ($date) {
+    $forDate = match ($date) {
         date("Ymd") => "Heute: ",
         date("Ymd", strtotime("+1 days")) => "Morgen: ",
         date("Ymd", strtotime("+2 days")) => "Übermorgen: ",
@@ -130,7 +121,7 @@ switch (date('w', strtotime($date))) {
         "type" => "section",
         "text" => [
             "type" => "mrkdwn",
-            "text" => "$date"
+            "text" => "$forDate"
         ]
     ],
 
@@ -151,8 +142,7 @@ switch (date('w', strtotime($date))) {
     [
         "type" => "divider"
     ]
-]
-
+    ]
     );
 
     $ch = curl_init($url);
@@ -178,13 +168,14 @@ switch (date('w', strtotime($date))) {
     curl_close($ch);
     $response_data = json_decode($response, true);
 
+    $date = date("d.m.Y", strtotime($date));
     if ($http_code !== 200 || !$response_data['ok']) {
         logNotificationToFile(date('d-m-Y H:i:s'), $date, $username, $channel, $title, $message, $response_data);
         return false;
     }
 
 
-    logNotificationToFile(date('d-m-Y H:i:s'), $date, $username, $channel, $title, $message, "Benachrichtigung erfolgreich gesendet");
+    logNotificationToFile(date('d-m-Y H:i:s'), $date, $username, $channel, $title, $message, $response_data);
     return true;
 }
 
@@ -192,12 +183,12 @@ switch (date('w', strtotime($date))) {
 
 
 function logNotificationToFile($dateSent, $forDate, $username, $channel, $title, $message, $error) {
-if(is_array($error)){
-    $error = json_encode($error);
-}
+    if (is_array($error)){
+        $error = json_encode($error);
+    }
     $logFile = 'notifications.log';
     $logEntry = sprintf(
-        "[%s] ForDate: %s, Username: %s, Channel: %s, Title: %s, Message: %s, (Error): %s\n",
+        "[%s] ForDate: %s, Username: %s, Channel: %s, Title: %s, Message: %s, Slack API Response Data: %s\n",
         $dateSent,
         $forDate,
         $username,
@@ -225,7 +216,6 @@ if(is_array($error)){
  * @return string The session ID
  */
 function loginToWebUntis(string $username, string $password, string $schoolUrl): string {
-
     $loginPayload = [
         "id" => "login",
         "method" => "authenticate",
@@ -275,6 +265,7 @@ function sendApiRequest($sessionId, $payload): mixed {
     $result = json_decode($response, true);
     return $result['result'] ?? "Error: " . $result['error'];
 }
+
 
 
 /**
@@ -409,13 +400,8 @@ function replaceSubjectWords($subject, $replacements) {
     if (!$replacements) {
         return $subject;
     }
-    $result = str_replace(array_keys($replacements), array_values($replacements), $subject);
-    return $result;
+    return str_replace(array_keys($replacements), array_values($replacements), $subject);
 }
-
-
-
-
 
 
 
@@ -436,13 +422,12 @@ function getFormatedTimetable($timetable, $replacements) {
     $formatedTimetable = [];
     $seenLessons = [];
 
-    for($i = 0; $i < $numOfLessons; $i++){
+    for ($i = 0; $i < $numOfLessons; $i++){
         $lessonNum = $startTimes[$timetable[$i]["startTime"]] ?? "notSet";
 
         // Hiermit werden "doppelte" Stunden herausgefiltert, da dies sonst zu Problemen bei der compArray-Funktion führen würde.
         // Mir ist bewusst, dass dies nicht die beste Lösung ist
-
-        // Wenn die Stunde bereits gesehen wurde, entfernen wir die erste Instanz
+        
         if (in_array($lessonNum, $seenLessons)) {
             foreach ($formatedTimetable as $key => $lesson) {
                 if ($lesson['lessonNum'] == $lessonNum) {
@@ -462,12 +447,11 @@ function getFormatedTimetable($timetable, $replacements) {
             "room" => $timetable[$i]["ro"][0]["name"] ?? "notSet",
         ];
 
-
-
+        
         $lesson["subject"] = replaceSubjectWords($lesson["subject"], $replacements);
 
         $formatedTimetable[] = $lesson;
-        $seenLessons[] = $lessonNum; // Stunde als gesehen markieren
+        $seenLessons[] = $lessonNum;
     }
 
     // Nach lessonNum sortieren
@@ -492,6 +476,7 @@ function getFormatedTimetable($timetable, $replacements) {
  */
 function compareArrays($array1, $array2, $date, $username) {
     $differences = findDifferences($array1, $array2);
+    $differences =  combineNotifications($differences);
     sendSlackMessages($differences, $date, $username);
     return !empty($differences);
 }
@@ -554,17 +539,36 @@ function handleDifference($subKey, $value, $newValue, $item) {
     };
 }
 
+function combineNotifications($differences) {
+    if (empty($differences)){
+        return;
+    }
+
+    foreach ($differences as $difference) {
+        $differencesOnlyLessonNum[] = $difference["title"][0];
+        $difference["title"] = substr($difference["title"], 1);
+        $differencesWithoutLessonNum[] = $difference;
+    }
+
+    for ($i = 0; $i < count($differencesWithoutLessonNum)-1; $i++){
+        if ($differencesWithoutLessonNum[$i]['title'] == $differencesWithoutLessonNum[$i+1]['title'] && $differencesWithoutLessonNum[$i]['channel'] == $differencesWithoutLessonNum[$i+1]['channel'] && $differencesWithoutLessonNum[$i]['message'] == $differencesWithoutLessonNum[$i+1]['message']){
+            $differences[$i]['title'] = $differencesOnlyLessonNum[$i] . ". & " . $differencesOnlyLessonNum[$i+1] . $differencesWithoutLessonNum[$i]['title'];
+            unset($differences[$i+1]);
+        }
+    }
+    return $differences;
+}
+
+
 function sendSlackMessages($differences, $date, $username) {
+    if (empty($differences)){
+        return;
+    }
     foreach ($differences as $difference) {
         sendslackMessage($username, $difference['channel'], $difference['title'], $difference['message'], $date);
         //echo $difference['channel'] . ", " . $difference['title'] . ", " . $difference['message'] . ", " . $date . "<br>";
     }
 }
-
-
-
-
-
 
 
 
@@ -604,7 +608,7 @@ function getMessageText($case) {
 /**
  * @return void
  */
-function logOut(){
+function logOut(): void {
     setcookie(session_name(), '', 100);
     session_unset();
     session_destroy();
@@ -630,7 +634,6 @@ function connectToDatabase(): mysqli {
         throw new Exception("Connection failed: " . $conn->connect_error);
 
     }
-
 
     return $conn;
 }
@@ -727,21 +730,7 @@ function updateDatabase(mysqli $conn, string $table, array $columnsToUpdate, arr
     $whereClauses = implode(' AND ', $whereClauses);
     $query = "UPDATE $table SET $columnsToUpdate WHERE $whereClauses";
 
-    $types = str_repeat('s', count($inputs));
-    $stmt = $conn->prepare($query);
-    if (!$stmt) {
-        throw new Exception("Prepare failed: " . $conn->error);
-    }
-
-    $stmt->bind_param($types, ...$inputs);
-
-    if ($stmt->execute()) {
-        $stmt->close();
-        return true;
-    } else {
-        $stmt->close();
-        return false;
-    }
+    return prepareAndExecuteDbRequest($conn, $query, $inputs);
 }
 
 function deleteFromDatabase(mysqli $conn, string $table, array $whereClauses, array $inputs): bool {
@@ -754,21 +743,7 @@ function deleteFromDatabase(mysqli $conn, string $table, array $whereClauses, ar
     $whereClauses = implode(' AND ', $whereClauses);
     $query = "DELETE FROM $table WHERE $whereClauses";
 
-    $types = str_repeat('s', count($inputs));
-    $stmt = $conn->prepare($query);
-    if (!$stmt) {
-        throw new Exception("Prepare failed: " . $conn->error);
-    }
-
-    $stmt->bind_param($types, ...$inputs);
-
-    if ($stmt->execute()) {
-        $stmt->close();
-        return true;
-    } else {
-        $stmt->close();
-        return false;
-    }
+    return prepareAndExecuteDbRequest($conn, $query, $inputs);
 }
 
 
@@ -788,7 +763,12 @@ function insertIntoDatabase(mysqli $conn, string $table, array $column, array $i
     $query = "INSERT INTO $table ($column) VALUES ($questionmarks)";
 
 
+    return prepareAndExecuteDbRequest($conn, $query, $inputs);
+}
 
+
+
+function prepareAndExecuteDbRequest($conn, $query, $inputs){
     $types = str_repeat('s', count($inputs));
     $stmt = $conn->prepare($query);
     if (!$stmt) {
@@ -805,6 +785,12 @@ function insertIntoDatabase(mysqli $conn, string $table, array $column, array $i
         return false;
     }
 }
+
+
+
+
+
+
 
 
 
@@ -862,7 +848,7 @@ function authenticateEncryptedPassword($conn, $username, $inputPassword) {
     $decryptedPassword = decryptCipher($encryptedPassword);
 
     // Passwort vergleichen
-        if($decryptedPassword === $inputPassword) {
+        if ($decryptedPassword === $inputPassword) {
             return $decryptedPassword;
         } else {
             return false;
