@@ -1,82 +1,114 @@
 <?php
 
+require_once "Logger.php";
+require_once __DIR__ . "/Exceptions/AuthenticationException.php";
+require_once __DIR__ . "/Exceptions/DatabaseException.php";
+require_once __DIR__ . "/Exceptions/EncryptionException.php";
+require_once __DIR__ . "/Exceptions/UserException.php";
+
+use Exceptions\AuthenticationException;
+use Exceptions\DatabaseException;
+use Exceptions\EncryptionException;
+use Exceptions\UserException;
+
+
+
+const DATABASE_EXCEPTION_PREFIX = 'DatabaseException: ';
+const CURL_ERROR_PREFIX = 'Curl error: ';
+const PREPARE_FAILED_PREFIX = 'Prepare failed: ';
+
+
 
 function initiateCheck($conn, $username, $password) {
-    $schoolUrl = getValueFromDatabase($conn, "users", "school_url", ["username" => $username]);
 
-    if (!$username){
+    $schoolUrl = getValueFromDatabase($conn, "users", "school_url", ["username" => $username], $username);
+
+    if (!$username) {
         header("Location: index.php");
         exit();
     }
 
-    $login = loginToWebUntis($username, $password, $schoolUrl);
+    try {
+        $login = loginToWebUntis($username, $password, $schoolUrl);
+    } catch (AuthenticationException) {
+        return;
+    }
+
     if (!$login) {
         return;
     }
 
-    $students = getStudents($login);
-    
-    $userId = getStudentIdByName($students, $username);
-    $notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username]);
+    try {
+        $students = getStudents($login, $username);
+        $userId = getStudentIdByName($students, $username);
+        $notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username], $username);
+    } catch (DatabaseException | UserException) {
+        return;
+    }
 
     $currentDate = date("Ymd");
     $maxDateToCheck = date("Ymd", strtotime("+$notificationForDaysInAdvance days"));
-    deleteFromDatabase($conn, "timetables", ["for_date < ?"], [$currentDate]);    // Delete old timetables
-    deleteFromDatabase($conn, "timetables", ["for_Date >= ?", "user = ?"], [$maxDateToCheck, $username]); // Delete timetables that are outside the notification range
 
+    try {
+        deleteFromDatabase($conn, "timetables", ["for_date < ?"], [$currentDate], $username);
+        deleteFromDatabase($conn, "timetables", ["for_Date >= ?", "user = ?"], [$maxDateToCheck, $username], $username);
+    } catch (DatabaseException $e) {
+        Logger::log(DATABASE_EXCEPTION_PREFIX . "; Alte Stundenplandaten nicht erfolgreich gelöscht; " . $e->getMessage());
+    }
 
     for ($i = 0; $i < $notificationForDaysInAdvance; $i++) {
         $date = date("Ymd", strtotime("+$i days"));
 
-        $timetable = getTimetable($login, $userId, $date);
-        $replacements = getValueFromDatabase($conn, "users", "dictionary", ["username" => $username]);
-        $formatedTimetable = getFormatedTimetable($timetable, $replacements);
+        try {
+            $timetable = getTimetable($login, $userId, $date, $username);
+            $replacements = getValueFromDatabase($conn, "users", "dictionary", ["username" => $username], $username);
+            $formatedTimetable = getFormatedTimetable($timetable, $replacements);
+            $lastRetrieval = getValueFromDatabase($conn, "timetables", "timetable_data", ["for_Date" => $date, "user" => $username], $username);
+        } catch (DatabaseException) {
+            continue;
+        }
 
-
-        $lastRetrieval = getValueFromDatabase($conn, "timetables", "timetable_data", ["for_Date" => $date, "user" => $username]);
-        if ($lastRetrieval){
+        if ($lastRetrieval) {
             $lastRetrieval = json_decode($lastRetrieval, true);
         }
 
-
         if (!$lastRetrieval && $formatedTimetable != null) {
-            insertIntoDatabase($conn, "timetables", ["timetable_data", "for_date", "user"], [$formatedTimetable, $date, $username]);
+            try {
+                insertIntoDatabase($conn, "timetables", ["timetable_data", "for_date", "user"], [$formatedTimetable, $date, $username], $username);
+            } catch (DatabaseException $e) {
+                Logger::log(DATABASE_EXCEPTION_PREFIX . $e->getMessage());
+                continue;
+            }
+
             continue;
         } elseif (!$lastRetrieval && $formatedTimetable == null) {
             continue;
         }
-        
+
+
         $compResult = compareArrays($lastRetrieval, $formatedTimetable, $date, $username);
 
-        
-        // Update the database with the new timetables
         if ($compResult) {
-            updateDatabase($conn, "timetables", ["timetable_data"], ["for_Date = ?", "user = ?"], [$formatedTimetable, $date, $username]);
+            try {
+                updateDatabase($conn, "timetables", ["timetable_data"], ["for_Date = ?", "user = ?"], [$formatedTimetable, $date, $username], $username);
+            } catch (DatabaseException) {
+                continue;
+            }
         }
     }
 }
 
-
-
-
-
-
-/**
- * Sends a message to a Slack channel using the slack Web API
- * @param string $channel The channel to send the message to (e.g. "#general")
- * @param string $title The title of the message
- * @param string $message The message to send
- * @param string $date The date to which the message refers
- * @return bool Whether the message was sent successfully
- */
 function sendslackMessage($username, $channel, $title, $message, $date): bool {
     global $conn;
     $url = 'https://slack.com/api/chat.postMessage';
 
+    try {
+        $botToken = getValueFromDatabase($conn, "users", "slack_bot_token", ["username" => $username], $username);
+    } catch (DatabaseException $e) {
+        Logger::log(DATABASE_EXCEPTION_PREFIX . $e->getMessage());
+        return false;
+    }
 
-    $botToken = getValueFromDatabase($conn, "users", "slack_bot_token", ["username" => $username]);
-
-    
     switch (date('w', strtotime($date))) {
         case 0:
             $weekday = "So";
@@ -104,7 +136,6 @@ function sendslackMessage($username, $channel, $title, $message, $date): bool {
             break;
     }
 
-
     $forDate = match ($date) {
         date("Ymd") => "Heute: ",
         date("Ymd", strtotime("+1 days")) => "Morgen: ",
@@ -112,37 +143,34 @@ function sendslackMessage($username, $channel, $title, $message, $date): bool {
         default => $date ? $weekday . ", " . date("d.m", strtotime($date)) . ": " : " ",
     };
 
-
-    // Prepare the payload
     $payload = array(
         'channel' => $channel,
         "blocks" => [
-    [
-        "type" => "section",
-        "text" => [
-            "type" => "mrkdwn",
-            "text" => "$forDate"
+            [
+                "type" => "section",
+                "text" => [
+                    "type" => "mrkdwn",
+                    "text" => "$forDate"
+                ]
+            ],
+            [
+                "type" => "section",
+                "text" => [
+                    "type" => "mrkdwn",
+                    "text" => "$title"
+                ]
+            ],
+            [
+                "type" => "section",
+                "text" => [
+                    "type" => "mrkdwn",
+                    "text" => "$message"
+                ]
+            ],
+            [
+                "type" => "divider"
+            ]
         ]
-    ],
-
-    [
-        "type" => "section",
-        "text" => [
-            "type" => "mrkdwn",
-            "text" => "$title"
-        ]
-    ],
-    [
-        "type" => "section",
-        "text" => [
-            "type" => "mrkdwn",
-            "text" => "$message"
-        ]
-    ],
-    [
-        "type" => "divider"
-    ]
-    ]
     );
 
     $ch = curl_init($url);
@@ -161,6 +189,7 @@ function sendslackMessage($username, $channel, $title, $message, $date): bool {
 
     if ($error) {
         curl_close($ch);
+        Logger::log(CURL_ERROR_PREFIX . $error);
         return false;
     }
 
@@ -169,24 +198,23 @@ function sendslackMessage($username, $channel, $title, $message, $date): bool {
     $response_data = json_decode($response, true);
 
     $date = date("d.m.Y", strtotime($date));
+    $exactDate = date("d.m.Y H:i:s");
     if ($http_code !== 200 || !$response_data['ok']) {
-        logNotificationToFile(date('d-m-Y H:i:s'), $date, $username, $channel, $title, $message, $response_data);
+        logNotificationToFile($exactDate, $date, $username, $channel, $title, $message, $response_data);
+        Logger::log("Slack API error: " . json_encode($response_data));
         return false;
     }
 
-
-    logNotificationToFile(date('d-m-Y H:i:s'), $date, $username, $channel, $title, $message, $response_data);
+    logNotificationToFile($exactDate, $date, $username, $channel, $title, $message, $response_data);
     return true;
 }
-
-
 
 
 function logNotificationToFile($dateSent, $forDate, $username, $channel, $title, $message, $error) {
     if (is_array($error)){
         $error = json_encode($error);
     }
-    $logFile = 'notifications.log';
+    $logFile = 'Log/' . date('Y-m-d') . '-notifications.log';
     $logEntry = sprintf(
         "[%s] ForDate: %s, Username: %s, Channel: %s, Title: %s, Message: %s, Slack API Response Data: %s\n",
         $dateSent,
@@ -197,11 +225,16 @@ function logNotificationToFile($dateSent, $forDate, $username, $channel, $title,
         $message,
         $error
     );
-
     file_put_contents($logFile, $logEntry, FILE_APPEND);
 }
 
 
+function logToFile($error) {
+    $date = date('d-m-Y');
+    $logFile = "Log/cronjob-$date.log";
+    $logEntry = sprintf("[%s] %s\n", date('d-m-Y H:i:s'), $error);
+    file_put_contents($logFile, $logEntry, FILE_APPEND);
+}
 
 
 
@@ -214,6 +247,7 @@ function logNotificationToFile($dateSent, $forDate, $username, $channel, $title,
  * @param string $password The password to log in with
  * @param string $schoolUrl The URL of the school
  * @return string The session ID
+ * @throws AuthenticationException
  */
 function loginToWebUntis(string $username, string $password, string $schoolUrl): string {
     $loginPayload = [
@@ -233,22 +267,33 @@ function loginToWebUntis(string $username, string $password, string $schoolUrl):
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
 
     $response = curl_exec($ch);
+    $error = curl_error($ch);
+
+    if ($error) {
+        curl_close($ch);
+        Logger::log(CURL_ERROR_PREFIX . $error, $username);
+        throw new AuthenticationException("Curl error: " . $error);
+    }
+
     $result = json_decode($response, true);
     curl_close($ch);
 
     if (isset($result['result']['sessionId'])) {
         return $result['result']['sessionId'];
     }
-    return "";
 
+    Logger::log("AuthenticationException: Untis Login failed. Response: " . json_encode($result), $username);
+    throw new AuthenticationException("Untis Login failed. Response: " . json_encode($result));
+    //return "";
 }
 
 /**
- * @param $sessionId
- * @param $payload
+ * @param string $sessionId
+ * @param array $payload
+ * @param string $username
  * @return mixed
  */
-function sendApiRequest($sessionId, $payload): mixed {
+function sendApiRequest(string $sessionId, array $payload, string $username): mixed {
     $url = "https://niobe.webuntis.com/WebUntis/jsonrpc.do?school=gym-osterode";
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -260,21 +305,34 @@ function sendApiRequest($sessionId, $payload): mixed {
     ]);
 
     $response = curl_exec($ch);
-    curl_close($ch);
+    $error = curl_error($ch);
+
+    if ($error) {
+        curl_close($ch);
+        Logger::log(CURL_ERROR_PREFIX . $error, $username);
+    }
 
     $result = json_decode($response, true);
-    return $result['result'] ?? "Error: " . $result['error'];
+    curl_close($ch);
+
+    if (isset($result['result'])) {
+        return $result['result'];
+    }
+
+    Logger::log("QueryException: API request failed. Response: " . json_encode($result), $username);
+    return "";
 }
 
 
 
 /**
- * @param $sessionId
- * @param $userId
- * @param $date
+ * @param string $sessionId
+ * @param int $userId
+ * @param string $date
+ * @param string $username
  * @return mixed
  */
-function getTimetable($sessionId, $userId, $date) {
+function getTimetable(string $sessionId, int $userId, string $date, string $username): mixed {
     $payload = [
         "id" => "getTimetable",
         "method" => "getTimetable",
@@ -286,7 +344,6 @@ function getTimetable($sessionId, $userId, $date) {
                 ],
                 "startDate" => $date,
                 "endDate" => $date,
-
                 "showLsText" => true,
                 "showStudentgroup" => true,
                 "showLsNumber" => true,
@@ -301,37 +358,42 @@ function getTimetable($sessionId, $userId, $date) {
         ],
         "jsonrpc" => "2.0"
     ];
-    return sendApiRequest($sessionId, $payload);
+
+    return sendApiRequest($sessionId, $payload, $username);
 }
 
-
 /**
- * @param $sessionId
+ * @param string $sessionId
+ * @param string $username
  * @return mixed
  */
-function getStudents($sessionId) {
+function getStudents(string $sessionId, string $username): mixed {
     $payload = [
         "id" => "getStudents",
         "method" => "getStudents",
         "params" => [],
         "jsonrpc" => "2.0"
     ];
-    return sendApiRequest($sessionId, $payload);
+
+    return sendApiRequest($sessionId, $payload, $username);
 }
 
 
 /**
- * @param $studentArray
- * @param $name
+ * @param array $studentArray
+ * @param string $name
  * @return mixed|null
  */
-function getStudentIdByName($studentArray, $name) {
+function getStudentIdByName(array $studentArray, string $name)
+{
     foreach ($studentArray as $student) {
         if ($student['name'] === $name) {
             return $student['id'];
         }
     }
-    return null;
+    Logger::log("Student not found: " . $name);
+    throw new UserException("Student not found: " . $name);
+    //return null;
 }
 
 
@@ -364,7 +426,7 @@ function cmp($a, $b) {
 
 function generateReplacementArray($replacements) {
     if (!$replacements) {
-        return;
+        return [];
     }
 
     if (substr($replacements, -1) == ";") {
@@ -392,7 +454,7 @@ function generateReplacementArray($replacements) {
  * Ersetzt vordefinierte Wörter im subject durch andere vordefinierte Wörter
  *
  * @param string $subject Das zu überprüfende Fach
- * @param array $replacements Das Array mit den Ersetzungen
+ * @param string $replacements Das Array mit den Ersetzungen
  * @return string Das ersetzte Fach
  */
 function replaceSubjectWords($subject, $replacements) {
@@ -413,21 +475,20 @@ function replaceSubjectWords($subject, $replacements) {
 
 
 /**
- * @param $timetable
+ * @param array $timetable
+ * @param string $replacements
  * @return array
  */
-function getFormatedTimetable($timetable, $replacements) {
+function getFormatedTimetable(array $timetable, string $replacements): array
+{
     global $startTimes;
     $numOfLessons = count($timetable);
     $formatedTimetable = [];
     $seenLessons = [];
 
-    for ($i = 0; $i < $numOfLessons; $i++){
+    for ($i = 0; $i < $numOfLessons; $i++) {
         $lessonNum = $startTimes[$timetable[$i]["startTime"]] ?? "notSet";
 
-        // Hiermit werden "doppelte" Stunden herausgefiltert, da dies sonst zu Problemen bei der compArray-Funktion führen würde.
-        // Mir ist bewusst, dass dies nicht die beste Lösung ist
-        
         if (in_array($lessonNum, $seenLessons)) {
             foreach ($formatedTimetable as $key => $lesson) {
                 if ($lesson['lessonNum'] == $lessonNum) {
@@ -447,14 +508,12 @@ function getFormatedTimetable($timetable, $replacements) {
             "room" => $timetable[$i]["ro"][0]["name"] ?? "notSet",
         ];
 
-        
         $lesson["subject"] = replaceSubjectWords($lesson["subject"], $replacements);
 
         $formatedTimetable[] = $lesson;
         $seenLessons[] = $lessonNum;
     }
 
-    // Nach lessonNum sortieren
     usort($formatedTimetable, "cmp");
 
     return $formatedTimetable;
@@ -472,7 +531,6 @@ function getFormatedTimetable($timetable, $replacements) {
 /**
  * @param $array1 (= lastRetrieval)
  * @param $array2 (= formatedTimetable)
- * @return array|string
  */
 function compareArrays($array1, $array2, $date, $username) {
     $differences = findDifferences($array1, $array2);
@@ -539,9 +597,13 @@ function handleDifference($subKey, $value, $newValue, $item) {
     };
 }
 
+/**
+ * @param $differences
+ * @return array
+ */
 function combineNotifications($differences) {
     if (empty($differences)){
-        return;
+        return [];
     }
 
     foreach ($differences as $difference) {
@@ -566,7 +628,6 @@ function sendSlackMessages($differences, $date, $username) {
     }
     foreach ($differences as $difference) {
         sendslackMessage($username, $difference['channel'], $difference['title'], $difference['message'], $date);
-        //echo $difference['channel'] . ", " . $difference['title'] . ", " . $difference['message'] . ", " . $date . "<br>";
     }
 }
 
@@ -618,6 +679,7 @@ function logOut(): void {
 
 
 /**
+ * Stellt eine Verbindung zur Datenbank her
  * @return mysqli
  */
 function connectToDatabase(): mysqli {
@@ -628,25 +690,26 @@ function connectToDatabase(): mysqli {
     $password = $config['password'];
     $database = $config['database'];
 
-    // Create connection
+    // Verbindung erstellen
     $conn = new mysqli($servername, $username, $password, $database);
     if ($conn->connect_error) {
-        throw new Exception("Connection failed: " . $conn->connect_error);
-
+        Logger::log("Connection failed: " . $conn->connect_error);
     }
-
     return $conn;
 }
 
-
 /**
+ * Holt Zeilen aus der Datenbank basierend auf den angegebenen Bedingungen
+ *
  * @param mysqli $conn
- * @param array $inputs
- * @param string $query
+ * @param string $table
+ * @param array $inputsAndConditions
+ * @param string $username
  * @return array
+ * @throws DatabaseException
  */
-
-function getRowsFromDatabase(mysqli $conn, string $table, array $inputsAndConditions): array {
+function getRowsFromDatabase(mysqli $conn, string $table, array $inputsAndConditions, string $username): array
+{
     $conditions = [];
     $inputs = [];
 
@@ -657,10 +720,11 @@ function getRowsFromDatabase(mysqli $conn, string $table, array $inputsAndCondit
 
     $whereClause = implode(' AND ', $conditions);
     $query = "SELECT * FROM $table WHERE $whereClause";
-    
+
     $stmt = $conn->prepare($query);
     if (!$stmt) {
-        throw new Exception("Prepare failed: " . $conn->error);
+        Logger::log(PREPARE_FAILED_PREFIX . $conn->error, $username);
+        throw new DatabaseException(PREPARE_FAILED_PREFIX . $conn->error);
     }
 
     $types = str_repeat('s', count($inputs));
@@ -674,14 +738,17 @@ function getRowsFromDatabase(mysqli $conn, string $table, array $inputsAndCondit
 
 
 /**
+ * Holt einen Wert aus der Datenbank basierend auf den angegebenen Bedingungen
+ *
  * @param mysqli $conn
- * @param array $inputs
+ * @param string $table
  * @param string $dataFromColumn
- * @param string $query
+ * @param array $inputsAndConditions
+ * @param string $username
  * @return string|null
  */
-
-function getValueFromDatabase(mysqli $conn, string $table, string $dataFromColumn, array $inputsAndConditions): ?string {
+function getValueFromDatabase(mysqli $conn, string $table, string $dataFromColumn, array $inputsAndConditions, string $username): ?string
+{
     $conditions = [];
     $inputs = [];
 
@@ -695,7 +762,8 @@ function getValueFromDatabase(mysqli $conn, string $table, string $dataFromColum
 
     $stmt = $conn->prepare($query);
     if (!$stmt) {
-        throw new Exception("Prepare failed: " . $conn->error);
+        Logger::log(PREPARE_FAILED_PREFIX . $conn->error, $username);
+        throw new DatabaseException(PREPARE_FAILED_PREFIX . $conn->error);
     }
 
     $types = str_repeat('s', count($inputs));
@@ -706,20 +774,27 @@ function getValueFromDatabase(mysqli $conn, string $table, string $dataFromColum
 
     if ($result->num_rows > 0) {
         $row = $result->fetch_assoc();
-        return $row[$dataFromColumn] ?? null;
+        return $row[$dataFromColumn] ?? "";
     }
+
     return null;
 }
 
 
 /**
+ * Aktualisiert Einträge in der Datenbank basierend auf den angegebenen Bedingungen
+ *
  * @param mysqli $conn
+ * @param string $table
+ * @param array $columnsToUpdate
+ * @param array $whereClauses
  * @param array $inputs
- * @param string $query
+ * @param string $username
  * @return bool
+ * @throws DatabaseException
  */
-
-function updateDatabase(mysqli $conn, string $table, array $columnsToUpdate, array $whereClauses, array $inputs): bool {
+function updateDatabase(mysqli $conn, string $table, array $columnsToUpdate, array $whereClauses, array $inputs, string $username): bool
+{
     foreach ($inputs as &$input) {
         if (is_array($input)) {
             $input = json_encode($input);
@@ -730,10 +805,28 @@ function updateDatabase(mysqli $conn, string $table, array $columnsToUpdate, arr
     $whereClauses = implode(' AND ', $whereClauses);
     $query = "UPDATE $table SET $columnsToUpdate WHERE $whereClauses";
 
-    return prepareAndExecuteDbRequest($conn, $query, $inputs);
+    try {
+        return prepareAndExecuteDbRequest($conn, $query, $inputs, $username);
+    } catch (DatabaseException $e) {
+        Logger::log(DATABASE_EXCEPTION_PREFIX . $e->getMessage(), $username);
+        throw $e;
+        //return false;
+    }
 }
 
-function deleteFromDatabase(mysqli $conn, string $table, array $whereClauses, array $inputs): bool {
+/**
+ * Löscht Einträge aus der Datenbank basierend auf den angegebenen Bedingungen
+ *
+ * @param mysqli $conn
+ * @param string $table
+ * @param array $whereClauses
+ * @param array $inputs
+ * @param string $username
+ * @return bool
+ * @throws DatabaseException
+ */
+function deleteFromDatabase(mysqli $conn, string $table, array $whereClauses, array $inputs, string $username): bool
+{
     foreach ($inputs as &$input) {
         if (is_array($input)) {
             $input = json_encode($input);
@@ -743,36 +836,66 @@ function deleteFromDatabase(mysqli $conn, string $table, array $whereClauses, ar
     $whereClauses = implode(' AND ', $whereClauses);
     $query = "DELETE FROM $table WHERE $whereClauses";
 
-    return prepareAndExecuteDbRequest($conn, $query, $inputs);
+    try {
+        return prepareAndExecuteDbRequest($conn, $query, $inputs, $username);
+    } catch (DatabaseException $e) {
+        Logger::log(DATABASE_EXCEPTION_PREFIX . $e->getMessage(), $username);
+        throw $e;
+        //return false;
+    }
 }
 
 
-function insertIntoDatabase(mysqli $conn, string $table, array $column, array $inputs): bool {
-
+/**
+ * Fügt Einträge in die Datenbank ein
+ *
+ * @param mysqli $conn
+ * @param string $table
+ * @param array $column
+ * @param array $inputs
+ * @param string $username
+ * @return bool
+ * @throws DatabaseException
+ */
+function insertIntoDatabase(mysqli $conn, string $table, array $column, array $inputs, string $username): bool
+{
     foreach ($inputs as &$input) {
         if (is_array($input)) {
             $input = json_encode($input);
         }
     }
 
-    $questionmarks = str_repeat('?, ', count($inputs)-1);
-    $questionmarks .= '?';
-
+    $questionmarks = str_repeat('?, ', count($inputs) - 1) . '?';
     $column = implode(', ', $column);
-
     $query = "INSERT INTO $table ($column) VALUES ($questionmarks)";
 
-
-    return prepareAndExecuteDbRequest($conn, $query, $inputs);
+    try {
+        return prepareAndExecuteDbRequest($conn, $query, $inputs, $username);
+    } catch (DatabaseException $e) {
+        Logger::log(DATABASE_EXCEPTION_PREFIX . $e->getMessage(), $username);
+        throw $e;
+        //return false;
+    }
 }
 
 
-
-function prepareAndExecuteDbRequest($conn, $query, $inputs){
+/**
+ * Bereitet eine Datenbankanfrage vor und führt sie aus
+ *
+ * @param mysqli $conn
+ * @param string $query
+ * @param array $inputs
+ * @param string $username
+ * @return bool
+ * @throws DatabaseException
+ */
+function prepareAndExecuteDbRequest(mysqli $conn, string $query, array $inputs, string $username): bool
+{
     $types = str_repeat('s', count($inputs));
     $stmt = $conn->prepare($query);
     if (!$stmt) {
-        throw new Exception("Prepare failed: " . $conn->error);
+        Logger::log(PREPARE_FAILED_PREFIX . $conn->error, $username);
+        throw new DatabaseException(PREPARE_FAILED_PREFIX . $conn->error);
     }
 
     $stmt->bind_param($types, ...$inputs);
@@ -781,8 +904,10 @@ function prepareAndExecuteDbRequest($conn, $query, $inputs){
         $stmt->close();
         return true;
     } else {
+        Logger::log("Query execution failed: " . $stmt->error, $username);
         $stmt->close();
-        return false;
+        throw new DatabaseException(PREPARE_FAILED_PREFIX . $conn->error);
+        //return false;
     }
 }
 
@@ -830,17 +955,32 @@ function encryptAndHashPassword($password) {
     return [$encryptedPassword, $passwordHash];
 }
 
+/**
+ * Authentifiziert ein verschlüsseltes Passwort
+ *
+ * @param mysqli $conn
+ * @param string $username
+ * @param string $inputPassword
+ * @return bool|string
+ * @throws DatabaseException
+ */
 function authenticateEncryptedPassword($conn, $username, $inputPassword) {
-
-    $encryptedPassword = getValueFromDatabase($conn, "users", "password_cipher", ["username" => $username]);
-    $passwordHash = getValueFromDatabase($conn, "users", "password_hash", ["username" => $username]);
+    try {
+        $encryptedPassword = getValueFromDatabase($conn, "users", "password_cipher", ["username" => $username], $username);
+        $passwordHash = getValueFromDatabase($conn, "users", "password_hash", ["username" => $username], $username);
+    } catch (DatabaseException $e) {
+        Logger::log(DATABASE_EXCEPTION_PREFIX . $e->getMessage(), $username);
+        throw $e; // Ausnahme erneut werfen
+    }
 
     if (!$encryptedPassword || !$passwordHash) {
+        Logger::log("Authentication failed: Users password_cipher or password_hash not found or not available", $username);
         return false; // Benutzer nicht gefunden oder Hash nicht vorhanden
     }
 
     // Passwort-Hash überprüfen
     if (!password_verify($inputPassword, $passwordHash)) {
+        Logger::log("Authentication failed: Password hash verification failed", $username);
         return false; // Authentifizierung fehlgeschlagen
     }
 
@@ -848,10 +988,9 @@ function authenticateEncryptedPassword($conn, $username, $inputPassword) {
     $decryptedPassword = decryptCipher($encryptedPassword);
 
     // Passwort vergleichen
-        if ($decryptedPassword === $inputPassword) {
-            return $decryptedPassword;
-        } else {
-            return false;
-        }
+    $isAuthenticated = $decryptedPassword === $inputPassword;
+    if (!$isAuthenticated) {
+        Logger::log("Authentication failed: Decrypted password does not match", $username);
+    }
+    return $isAuthenticated ? $decryptedPassword : false;
 }
-

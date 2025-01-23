@@ -6,13 +6,15 @@
     <link rel="apple-touch-icon" href="logo.svg">
     <link rel="icon" href="logo.svg" type="image/svg+xml">
     <link rel="shortcut icon" href="logo.svg" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <?php
 session_start();
-
+require_once __DIR__ . "/Exceptions/AuthenticationException.php";
+use Exceptions\AuthenticationException;
 
 $username = $_POST['username'] ?? null;
 $password = $_POST['password'] ?? null;
@@ -21,50 +23,41 @@ $schoolUrl = $_POST['schoolUrl'] ?? null;
 if ($username && $password && $schoolUrl) {
     require_once "functions.php";
 
+    try {
+        $sessionId = loginToWebUntis($username, $password, $schoolUrl);
 
-    $login = loginToWebUntis($username, $password, $schoolUrl);
-    if ($login) {
+        $conn = connectToDatabase();
+        $isUserInDatabaseAndAuthenticated = authenticateEncryptedPassword($conn, $username, $password);
 
-        try {
-            $conn = connectToDatabase();
-            $isUserInDatabaseAndAuthenticated = authenticateEncryptedPassword($conn, $username, $password);
-
-            if (!$isUserInDatabaseAndAuthenticated) {
-                $passwordCipherAndHash = encryptAndHashPassword($password);
-                if (empty(getRowsFromDatabase($conn, "users", ["username" => $username]))) {
-                    insertIntoDatabase($conn, "users", ["username", "password_cipher", "password_hash", "school_url"], [$username, $passwordCipherAndHash[0], $passwordCipherAndHash[1], $schoolUrl]);
-                } else {
-                    updateDatabase($conn, "users", ["password_cipher", "password_hash"], ["username = ?"], [$passwordCipherAndHash[0], $passwordCipherAndHash[1], $username]);
-                }
+        if (!$isUserInDatabaseAndAuthenticated) {
+            $passwordCipherAndHash = encryptAndHashPassword($password);
+            if (empty(getRowsFromDatabase($conn, "users", ["username" => $username], $username))) {
+                insertIntoDatabase($conn, "users", ["username", "password_cipher", "password_hash", "school_url"], [$username, $passwordCipherAndHash[0], $passwordCipherAndHash[1], $schoolUrl], $username);
+            } else {
+                updateDatabase($conn, "users", ["password_cipher", "password_hash"], ["username = ?"], [$passwordCipherAndHash[0], $passwordCipherAndHash[1], $username], $username);
             }
-
-            $_SESSION['username'] = $username;
-            $_SESSION['password'] = $password;
-            $_SESSION['conn'] = $conn;
-            $_SESSION['schoolUrl'] = $schoolUrl;
-
-
-            $currentTimestamp = date('Y-m-d h:i:s', time());
-            updateDatabase($conn, "users", ["last_login"], ["username = ?"], [$currentTimestamp, $username]);
-
-        } catch (Exception $e) {
-            echo $e->getMessage();
-            exit();
         }
+
+        $_SESSION['username'] = $username;
+        $_SESSION['password'] = $password;
+        $_SESSION['conn'] = $conn;
+        $_SESSION['schoolUrl'] = $schoolUrl;
+
+        $currentTimestamp = date('Y-m-d h:i:s', time());
+        updateDatabase($conn, "users", ["last_login"], ["username = ?"], [$currentTimestamp, $username], $username);
 
         $conn->close();
         header("Location: settings.php");
         exit();
-    } else {
+
+    } catch (AuthenticationException | Exception $e) {
         $loginMessage = getMessageText("loginFailed");
     }
+
 } else {
     $loginMessage = '';
 }
 ?>
-
-
-
 
 <div class="img-div">
     <img class="notification-img" src="notification example.png" alt="Notification Example">
@@ -72,10 +65,7 @@ if ($username && $password && $schoolUrl) {
 <br><br>
 <p class="notification-text">↑ Beispiel einer Benachrichtigung ↑</p>
 
-
-
 <div class="parent">
-
     <form action="index.php" method="post">
         <button id="toggle-theme" class="dark-mode-switch-btn">
             <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
@@ -106,6 +96,9 @@ if ($username && $password && $schoolUrl) {
         <div class="label-container">
             <input type="password" id="password" name="password" required>
             <span class="info-icon" onclick="openExternInfoSite('password')" onKeyDown="openExternInfoSite('password')">?</span>
+            <span class="password-toggle" onclick="togglePasswordVisibility()" onKeyDown="togglePasswordVisibility()">
+                <i id="toggleIcon" class="far fa-eye-slash"></i>
+            </span>
         </div>
         <br>
 
@@ -114,7 +107,6 @@ if ($username && $password && $schoolUrl) {
         <?php echo $loginMessage; ?>
 
         <a class="info-text" href="impressum.php">Impressum</a>
-
     </form>
 </div>
 </body>

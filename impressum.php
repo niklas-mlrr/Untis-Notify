@@ -17,11 +17,14 @@
         </button>
 
         <h3>Impressum</h3>
-        <p>Angaben gemäß § 5 TMG</p>
+            <p>Angaben gemäß § 5 DDG</p>
         <p>Niklas Müller<br>
             37520 Osterode am Harz</p>
         <p>Kontakt:<br>
-            E-Mail: <a class="email" href="mailto:deine-email@example.com">info@untis-notify.de</a></p>
+            <a class="email" href="mailto:deine-email@example.com">info@untis-notify.de</a>
+            <br><br>
+            <a class="email" href="https://github.com/TechNikFuture/Untis-Notify" target="_blank">GitHub Repository</a>
+        </p>
         </form>
     </div>
 </body>

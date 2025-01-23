@@ -10,22 +10,27 @@
 
 <?php
 session_start();
+require_once "Logger.php";
+require_once __DIR__ . "/Exceptions/AuthenticationException.php";
+use Exceptions\DatabaseException;
+
 
 require_once "functions.php";
 
 $username = $_SESSION['username'] ?? null;
 $password = $_SESSION['password'] ?? null;
-$conn = connectToDatabase();
-
-$slackBotToken = getValueFromDatabase($conn, "users", "slack_bot_token", ["username" => $username]);
-$dictionary = getValueFromDatabase($conn, "users", "dictionary", ["username" => $username]);
-$notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username]);
+try {
+    $conn = connectToDatabase();
+    $slackBotToken = getValueFromDatabase($conn, "users", "slack_bot_token", ["username" => $username], $username);
+    $dictionary = getValueFromDatabase($conn, "users", "dictionary", ["username" => $username], $username);
+    $notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username], $username);
+} catch (Exception $e) {
+    Logger::log("Settings: Db Error; " . $e->getMessage(), $username);
+}
 
 
 
 initiateCheck($conn, $username, $password);
-
-
 
 
 $btnResponse = '';
@@ -34,16 +39,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dictionary = $_POST['dictionary'] ?? $dictionary;
     $notificationForDaysInAdvance = $_POST['notificationDays'] ?? $notificationForDaysInAdvance;
 
-
-    if(updateDatabase($conn, "users", ["slack_bot_token", "dictionary", "notification_for_days_in_advance"], ["username = ?"], [$slackBotToken, $dictionary, $notificationForDaysInAdvance, $username])){
-        $btnResponse = getMessageText("settingsSavedSuccessfully");
+    try {
+        updateDatabase($conn, "users", ["slack_bot_token", "dictionary", "notification_for_days_in_advance"], ["username = ?"], [$slackBotToken, $dictionary, $notificationForDaysInAdvance, $username], $username);
         initiateCheck($conn, $username, $password);
-    } else {
+        $btnResponse = getMessageText("settingsSavedSuccessfully");
+    } catch (DatabaseException $e) {
         $btnResponse = getMessageText("settingsNotSaved");
     }
     $conn->close();
 }
-
 
 
 if (isset($_POST['action'])) {
@@ -53,46 +57,52 @@ if (isset($_POST['action'])) {
             logOut();
             break;
         case 'deleteAccount':
-            if (deleteFromDatabase($conn, "users", ["username = ?"], [$username])) {
-                $btnResponse = getMessageText("accountDeletedSuccessfully");
-                sleep(2);
-                $conn->close();
-                logOut();
-            } else {
+            try {
+                if (deleteFromDatabase($conn, "users", ["username = ?"], [$username], $username)) {
+                    $btnResponse = getMessageText("accountDeletedSuccessfully");
+                    sleep(2);
+                    $conn->close();
+                    logOut();
+                } else {
+                    $btnResponse = getMessageText("accountNotDeleted");
+                }
+            } catch (DatabaseException $e) {
                 $btnResponse = getMessageText("accountNotDeleted");
             }
             break;
         case 'testNotification':
+            try {
+                $testNotificationAusfall = sendslackMessage($username, "ausfall", "Testbenachrichtigung für den Channel ausfall", " ", "");
+                $testNotificationRaumänderung = sendslackMessage($username, "raumänderung", "Testbenachrichtigung für den Channel raumänderung", " ", "");
+                $testNotificationVertretung = sendslackMessage($username, "vertretung", "Testbenachrichtigung für den Channel vertretung", " ", "");
+                $testNotificationSonstiges = sendslackMessage($username, "sonstiges", "Testbenachrichtigung für den Channel sonstiges", "Wenn du das hier liest, hast du alles richtig gemacht! (Solange auf der Website \"Alle 4 Testbenachrichtigungen erfolgreich gesendet\" stand.) Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind. Nun kannst du die Slack App überall dort installieren und dich anmelden, wo du benachrichtigt werden möchtest (Handy, iPad, usw.). In Einzelfällen (z.B. wenn bei Untis durch eine spezielle Veranstalltung aufeinmal 2 \"Fächer\" für eine Stunde eingetragen sind und die Stunde somit vertikal in der Mitte geteilt ist) kann es sein, dass nicht alles richtig verarbeitet werden kann. Bei Fehlern oder Fragen mir gerne schreiben.", "");
 
-            $testNotificationAusfall = sendslackMessage($username, "ausfall", "Testbenachrichtigung für den Channel ausfall", " ", "");
-            $testNotificationRaumänderung = sendslackMessage($username, "raumänderung", "Testbenachrichtigung für den Channel raumänderung", " ", "");
-            $testNotificationVertretung = sendslackMessage($username, "vertretung", "Testbenachrichtigung für den Channel vertretung", " ", "");
-            $testNotificationSonstiges = sendslackMessage($username, "sonstiges", "Testbenachrichtigung für den Channel sonstiges", "Wenn du das hier liest, hast du alles richtig gemacht! (Solange auf der Website \"Alle 4 Testbenachrichtigungen erfolgreich gesendet\" stand.) Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind. Nun kannst du die Slack App überall dort installieren und dich anmelden, wo du benachrichtigt werden möchtest (Handy, iPad, usw.). In Einzelfällen (z.B. wenn bei Untis durch eine spezielle Veranstalltung aufeinmal 2 \"Fächer\" für eine Stunde eingetragen sind und die Stunde somit vertikal in der Mitte geteilt ist) kann es sein, dass nicht alles richtig verarbeitet werden kann. Bei Fehlern oder Fragen mir gerne schreiben.", "");
-
-            if ($testNotificationAusfall && $testNotificationRaumänderung && $testNotificationVertretung && $testNotificationSonstiges) {
-                if (updateDatabase($conn, "users", ["setup_complete"], ["username = ?"], [true, $username])){
-                    $btnResponse = getMessageText("testNotificationAllSent");
+                if ($testNotificationAusfall && $testNotificationRaumänderung && $testNotificationVertretung && $testNotificationSonstiges) {
+                    if (updateDatabase($conn, "users", ["setup_complete"], ["username = ?"], [true, $username], $username)) {
+                        $btnResponse = getMessageText("testNotificationAllSent");
+                    }
+                } elseif (!$testNotificationSonstiges && !$testNotificationVertretung && !$testNotificationRaumänderung && !$testNotificationAusfall) {
+                    $btnResponse = getMessageText("testNotificationAllNotSent");
+                } elseif (!$testNotificationAusfall) {
+                    $btnResponse = getMessageText("testNotificationAusfallNotSent");
+                } elseif (!$testNotificationRaumänderung) {
+                    $btnResponse = getMessageText("testNotificationRaumänderungNotSent");
+                } elseif (!$testNotificationVertretung) {
+                    $btnResponse = getMessageText("testNotificationVertretungNotSent");
+                } elseif (!$testNotificationSonstiges) {
+                    $btnResponse = getMessageText("testNotificationSonstigesNotSent");
                 }
-            } elseif(!$testNotificationSonstiges && !$testNotificationVertretung && !$testNotificationRaumänderung && !$testNotificationAusfall) {
-                $btnResponse = getMessageText("testNotificationAllNotSent");
-            } elseif (!$testNotificationAusfall) {
-                $btnResponse = getMessageText("testNotificationAusfallNotSent");
-            } elseif (!$testNotificationRaumänderung) {
-                $btnResponse = getMessageText("testNotificationRaumänderungNotSent");
-            } elseif (!$testNotificationVertretung) {
-                $btnResponse = getMessageText("testNotificationVertretungNotSent");
-            } elseif (!$testNotificationSonstiges) {
-                $btnResponse = getMessageText("testNotificationSonstigesNotSent");
+                break;
+            } catch (DatabaseException $e) {
+                break;
             }
-            break;
     }
     $conn->close();
 }
+
 ?>
 
 <div class="parent parent-settings">
-
-
     <form action="settings.php" method="post">
         <button id="toggle-theme" class="dark-mode-switch-btn">
             <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
@@ -118,7 +128,8 @@ if (isset($_POST['action'])) {
         <div class="label-container">
             <input type="range" id="notificationDays" name="notificationDays" min="0" max="30" value="<?php echo $notificationForDaysInAdvance; ?>" oninput="this.nextElementSibling.value = this.value">
             <output><?php echo $notificationForDaysInAdvance; ?></output>
-            <span class="info-icon" onclick="openExternInfoSite('TageInVoraus')" onKeyDown="openExternInfoSite('TageInVoraus')">?</span>
+            <span class="info-icon info-icon-slider" onclick="openExternInfoSite('TageInVoraus')"
+                  onKeyDown="openExternInfoSite('TageInVoraus')">?</span>
         </div>
         <br><br>
         <button class="btn-save-settings btn" type="submit">Einstellungen speichern</button>
