@@ -214,7 +214,7 @@ function logNotificationToFile($dateSent, $forDate, $username, $channel, $title,
     if (is_array($error)){
         $error = json_encode($error);
     }
-    $logFile = 'Log/' . date('Y-m-d') . '-notifications.log';
+    $logFile = 'Logs/' . date('Y-m-d') . '-notifications.log';
     $logEntry = sprintf(
         "[%s] ForDate: %s, Username: %s, Channel: %s, Title: %s, Message: %s, Slack API Response Data: %s\n",
         $dateSent,
@@ -225,17 +225,13 @@ function logNotificationToFile($dateSent, $forDate, $username, $channel, $title,
         $message,
         $error
     );
-    file_put_contents($logFile, $logEntry, FILE_APPEND);
+
+    if (!file_exists($logFile)) {
+        file_put_contents($logFile, $logEntry);
+    } else {
+        file_put_contents($logFile, $logEntry, FILE_APPEND);
+    }
 }
-
-
-function logToFile($error) {
-    $date = date('d-m-Y');
-    $logFile = "Log/cronjob-$date.log";
-    $logEntry = sprintf("[%s] %s\n", date('d-m-Y H:i:s'), $error);
-    file_put_contents($logFile, $logEntry, FILE_APPEND);
-}
-
 
 
 
