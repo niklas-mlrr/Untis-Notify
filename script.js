@@ -16,19 +16,19 @@ function openExternInfoSite(info) {
     let url = "";
     switch(info) {
         case "BotToken":
-            url = "https://github.com/TechNikFuture/Untis-Notify/wiki/Slack-Bot-Token-generieren";
+            url = "https://github.com/niklas-mlrr/Untis-Notify/wiki/Slack-Bot-Token-generieren";
             break;
         case "TageInVoraus":
-            url = "https://github.com/TechNikFuture/Untis-Notify/wiki/Wie-viele-Tage-im-Voraus-sollen-auf-%C3%84nderungen-gepr%C3%BCft-werden%3F";
+            url = "https://github.com/niklas-mlrr/Untis-Notify/wiki/Wie-viele-Tage-im-Voraus-sollen-auf-%C3%84nderungen-gepr%C3%BCft-werden%3F";
             break;
         case "username":
-            url = "https://github.com/TechNikFuture/Untis-Notify/wiki/Untis-Benutzernamen-sehen";
+            url = "https://github.com/niklas-mlrr/Untis-Notify/wiki/Untis-Benutzernamen-sehen";
             break;
         case "password":
-            url = "https://github.com/TechNikFuture/Untis-Notify/wiki/Untis-Passwort-%C3%A4ndern";
+            url = "https://github.com/niklas-mlrr/Untis-Notify/wiki/Untis-Passwort-%C3%A4ndern";
             break;
         case "dictionary":
-            url = "https://github.com/TechNikFuture/Untis-Notify/wiki/Personalisierbares-Dictionary-(optional)";
+            url = "https://github.com/niklas-mlrr/Untis-Notify/wiki/Personalisierbares-Dictionary-(optional)";
             break;
 
     }
