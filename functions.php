@@ -417,7 +417,9 @@ function cmp($a, $b) {
  * @param string $replacements
  * @return array
  */
-
+// Der ReplacementArray wird jedes mal neu generiert,
+// da die direkte Benutzereingabe in der Db gespeichert wird,
+// da diese jederzeit vom Benutzer änderbar sein muss.
 function generateReplacementArray(string $replacements): array{
     if (!$replacements) {
         return [];
@@ -970,7 +972,7 @@ function authenticateEncryptedPassword(mysqli $conn, string $username, string $i
     $passwordHash = getValueFromDatabase($conn, "users", "password_hash", ["username" => $username], $username);
 
     if (!$encryptedPassword || !$passwordHash) {
-        Logger::log("Authentication failed: Users password_cipher or password_hash not found or not available", $username);
+        return "";
     }
 
     // Passwort-Hash überprüfen

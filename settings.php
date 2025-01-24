@@ -109,6 +109,7 @@ if (isset($_POST['action'])) {
                 }
                 break;
             } catch (DatabaseException|Exception $e) {
+                $btnResponse = getMessageText("testNotificationAllNotSent");
                 break;
             }
         default:
