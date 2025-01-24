@@ -5,7 +5,7 @@ CREATE TABLE `users` (
     `password_hash` varchar(255) NOT NULL,
     `slack_bot_token` varchar(70) DEFAULT NULL,
     `setup_complete` tinyint(1) DEFAULT 0,
-    `notification_for_days_in_advance` int(11) DEFAULT 14,
+    `notification_for_days_in_advance` int(11) DEFAULT 10,
     `last_login` datetime DEFAULT NULL,
     `created` datetime DEFAULT current_timestamp(),
     `school_url` varchar(100) DEFAULT NULL,
@@ -13,7 +13,6 @@ CREATE TABLE `users` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
 
 CREATE TABLE `timetables` (
     `id` int(11) unsigned NOT NULL AUTO_INCREMENT,

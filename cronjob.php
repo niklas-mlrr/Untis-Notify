@@ -8,7 +8,7 @@ use Exceptions\DatabaseException;
 try {
     $conn = connectToDatabase();
     $users = getRowsFromDatabase($conn, "users", ["setup_complete" => 1], "Cronjob");
-} catch (DatabaseException | Exception $e) {
+} catch (DatabaseException $e) {
     exit();
 }
 
@@ -23,7 +23,7 @@ foreach ($users as $user) {
     }
 
     if (!password_verify($password, $passwordHash)) {
-        Logger::log("Password verification failed for user: $username", $username);
+        Logger::log("Password verification failed", $username);
         continue;
     }
 

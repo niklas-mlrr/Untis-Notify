@@ -20,8 +20,13 @@ $username = $_POST['username'] ?? null;
 $password = $_POST['password'] ?? null;
 $schoolUrl = $_POST['schoolUrl'] ?? null;
 
+
 if ($username && $password && $schoolUrl) {
     require_once "functions.php";
+
+    $username = trim($username);
+    $password = trim($password);
+    $schoolUrl = trim($schoolUrl);
 
     try {
         $sessionId = loginToWebUntis($username, $password, $schoolUrl);

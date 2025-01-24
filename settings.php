@@ -9,25 +9,35 @@
 <body>
 
 <?php
-session_start();
-require_once "Logger.php";
-require_once __DIR__ . "/Exceptions/AuthenticationException.php";
+
 use Exceptions\DatabaseException;
+
+session_start();
 
 
 require_once "functions.php";
 
 $username = $_SESSION['username'] ?? null;
 $password = $_SESSION['password'] ?? null;
+
+if (!$username || !$password) {
+    logOut();
+}
+
+$conn = null;
+$slackBotToken = "";
+$dictionary = "";
+$notificationForDaysInAdvance = 0;
+
+
 try {
     $conn = connectToDatabase();
     $slackBotToken = getValueFromDatabase($conn, "users", "slack_bot_token", ["username" => $username], $username);
     $dictionary = getValueFromDatabase($conn, "users", "dictionary", ["username" => $username], $username);
     $notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username], $username);
-} catch (Exception $e) {
-    Logger::log("Settings: Db Error; " . $e->getMessage(), $username);
+} catch (DatabaseException $e) {
+    $btnResponse = getMessageText("dbError");
 }
-
 
 
 initiateCheck($conn, $username, $password);
@@ -38,6 +48,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $slackBotToken = $_POST['slackBotToken'] ?? $slackBotToken;
     $dictionary = $_POST['dictionary'] ?? $dictionary;
     $notificationForDaysInAdvance = $_POST['notificationDays'] ?? $notificationForDaysInAdvance;
+
+    $slackBotToken = trim($slackBotToken);
+    $dictionary = trim($dictionary);
+
 
     try {
         updateDatabase($conn, "users", ["slack_bot_token", "dictionary", "notification_for_days_in_advance"], ["username = ?"], [$slackBotToken, $dictionary, $notificationForDaysInAdvance, $username], $username);
@@ -51,31 +65,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
 if (isset($_POST['action'])) {
-    $conn = connectToDatabase();
+    try {
+        $conn = connectToDatabase();
+    } catch (DatabaseException $e) {
+        $btnResponse = getMessageText("dbConnError");
+    }
     switch ($_POST['action']) {
         case 'logout':
             logOut();
             break;
         case 'deleteAccount':
             try {
-                if (deleteFromDatabase($conn, "users", ["username = ?"], [$username], $username)) {
-                    $btnResponse = getMessageText("accountDeletedSuccessfully");
-                    sleep(2);
-                    $conn->close();
-                    logOut();
-                } else {
-                    $btnResponse = getMessageText("accountNotDeleted");
-                }
+                deleteFromDatabase($conn, "users", ["username = ?"], [$username], $username);
+                $btnResponse = getMessageText("accountDeletedSuccessfully");
+                sleep(2);
+                $conn->close();
+                logOut();
             } catch (DatabaseException $e) {
                 $btnResponse = getMessageText("accountNotDeleted");
             }
             break;
         case 'testNotification':
             try {
-                $testNotificationAusfall = sendslackMessage($username, "ausfall", "Testbenachrichtigung für den Channel ausfall", " ", "");
-                $testNotificationRaumänderung = sendslackMessage($username, "raumänderung", "Testbenachrichtigung für den Channel raumänderung", " ", "");
-                $testNotificationVertretung = sendslackMessage($username, "vertretung", "Testbenachrichtigung für den Channel vertretung", " ", "");
-                $testNotificationSonstiges = sendslackMessage($username, "sonstiges", "Testbenachrichtigung für den Channel sonstiges", "Wenn du das hier liest, hast du alles richtig gemacht! (Solange auf der Website \"Alle 4 Testbenachrichtigungen erfolgreich gesendet\" stand.) Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind. Nun kannst du die Slack App überall dort installieren und dich anmelden, wo du benachrichtigt werden möchtest (Handy, iPad, usw.). In Einzelfällen (z.B. wenn bei Untis durch eine spezielle Veranstalltung aufeinmal 2 \"Fächer\" für eine Stunde eingetragen sind und die Stunde somit vertikal in der Mitte geteilt ist) kann es sein, dass nicht alles richtig verarbeitet werden kann. Bei Fehlern oder Fragen mir gerne schreiben.", "");
+                $testNotificationAusfall = sendslackMessage($username, "ausfall", "Testbenachrichtigung für den Channel ausfall", " ", "", $conn);
+                $testNotificationRaumänderung = sendslackMessage($username, "raumänderung", "Testbenachrichtigung für den Channel raumänderung", " ", "", $conn);
+                $testNotificationVertretung = sendslackMessage($username, "vertretung", "Testbenachrichtigung für den Channel vertretung", " ", "", $conn);
+                $testNotificationSonstiges = sendslackMessage($username, "sonstiges", "Testbenachrichtigung für den Channel sonstiges", "Wenn du das hier liest, hast du alles richtig gemacht! (Solange auf der Website \"Alle 4 Testbenachrichtigungen erfolgreich gesendet\" stand.) Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind. Nun kannst du die Slack App überall dort installieren und dich anmelden, wo du benachrichtigt werden möchtest (Handy, iPad, usw.). In Einzelfällen (z.B. wenn bei Untis durch eine spezielle Veranstalltung aufeinmal 2 \"Fächer\" für eine Stunde eingetragen sind und die Stunde somit vertikal in der Mitte geteilt ist) kann es sein, dass nicht alles richtig verarbeitet werden kann. Bei Fehlern oder Fragen mir gerne schreiben.", "", $conn);
 
                 if ($testNotificationAusfall && $testNotificationRaumänderung && $testNotificationVertretung && $testNotificationSonstiges) {
                     if (updateDatabase($conn, "users", ["setup_complete"], ["username = ?"], [true, $username], $username)) {
@@ -93,9 +108,11 @@ if (isset($_POST['action'])) {
                     $btnResponse = getMessageText("testNotificationSonstigesNotSent");
                 }
                 break;
-            } catch (DatabaseException $e) {
+            } catch (DatabaseException|Exception $e) {
                 break;
             }
+        default:
+            break;
     }
     $conn->close();
 }
@@ -126,7 +143,7 @@ if (isset($_POST['action'])) {
 
         <label for="notificationDays">Wie viele Tage im Voraus sollen auf Änderungen geprüft werden?</label>
         <div class="label-container">
-            <input type="range" id="notificationDays" name="notificationDays" min="0" max="30" value="<?php echo $notificationForDaysInAdvance; ?>" oninput="this.nextElementSibling.value = this.value">
+            <input type="range" id="notificationDays" name="notificationDays" min="0" max="20" value="<?php echo $notificationForDaysInAdvance; ?>" oninput="this.nextElementSibling.value = this.value">
             <output><?php echo $notificationForDaysInAdvance; ?></output>
             <span class="info-icon info-icon-slider" onclick="openExternInfoSite('TageInVoraus')"
                   onKeyDown="openExternInfoSite('TageInVoraus')">?</span>
