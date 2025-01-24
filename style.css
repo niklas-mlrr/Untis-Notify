@@ -15,6 +15,7 @@
     --btn-save-settings-background-color: #45a049;
     --btn-log-out-background-color: #b1b5b3;
     --btn-delete-acc-background-color: #ff642b;
+    --slider-thumb-color: #4e4e4e;
 }
 
 body {
@@ -50,6 +51,7 @@ body.dark-mode {
     --btn-save-settings-background-color: #357a38;
     --btn-log-out-background-color: #444;
     --btn-delete-acc-background-color: #a22b1a;
+    --slider-thumb-color: #dadada;
 }
 
 .parent {
@@ -144,7 +146,7 @@ input[type="range"]::-webkit-slider-thumb {
     height: 18px;
     width: 18px;
     border-radius: 50%;
-    background: var(--text-color); /* Farbe des Thumbs */
+    background: var(--slider-thumb-color); /* Farbe des Thumbs */
     cursor: pointer;
     margin-top: -5px; /* Zentriert den Thumb */
 }
@@ -201,15 +203,7 @@ input[type="range"]::-ms-thumb {
     margin-top: -5px; /* Zentriert den Thumb */
 }
 
-input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    height: 18px;
-    width: 18px;
-    border-radius: 50%;
-    background: var(--text-color); /* Farbe des Thumbs */
-    cursor: pointer;
-    margin-top: -5px; /* Zentriert den Thumb */
-}
+
 
 input[type="range"]:focus {
     outline: none; /* Entfernt den Fokus-Ring */

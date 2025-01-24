@@ -72,9 +72,8 @@ function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $logi
         if (!$lastRetrieval) {
             if ($formatedTimetable != null) {
                 insertIntoDatabase($conn, "timetables", ["timetable_data", "for_date", "user"], [$formatedTimetable, $date, $username], $username);
-            } else{
-                return;
             }
+            return;
         }
 
     } catch (DatabaseException) {
@@ -474,8 +473,7 @@ function replaceSubjectWords(string $subject, string $replacements): string {
  * @param string $replacements
  * @return array
  */
-function getFormatedTimetable(array $timetable, string $replacements): array
-{
+function getFormatedTimetable(array $timetable, string $replacements): array {
     global $startTimes;
     $numOfLessons = count($timetable);
     $formatedTimetable = [];
@@ -973,13 +971,11 @@ function authenticateEncryptedPassword(mysqli $conn, string $username, string $i
 
     if (!$encryptedPassword || !$passwordHash) {
         Logger::log("Authentication failed: Users password_cipher or password_hash not found or not available", $username);
-        throw new DatabaseException("Authentication failed: Users password_cipher or password_hash not found or not available");
     }
 
     // Passwort-Hash überprüfen
     if (!password_verify($inputPassword, $passwordHash)) {
         Logger::log("Authentication failed: Password hash verification failed", $username);
-        throw new Exception("Authentication failed: Password hash verification failed");
     }
 
     // Passwort entschlüsseln

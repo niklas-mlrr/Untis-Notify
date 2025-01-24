@@ -28,7 +28,7 @@ function openExternInfoSite(info) {
             url = "https://github.com/TechNikFuture/Untis-Notify/wiki/Untis-Passwort-%C3%A4ndern";
             break;
         case "dictionary":
-            url = "https://github.com/TechNikFuture/Untis-Notify/wiki/Personalisierbares-Dictionary";
+            url = "https://github.com/TechNikFuture/Untis-Notify/wiki/Personalisierbares-Dictionary-(optional)";
             break;
 
     }
