@@ -896,7 +896,7 @@ function prepareAndExecuteDbRequest(mysqli $conn, string $query, array $inputs, 
 
 
 function encryptString($str): string {
-    $config = require_once 'config.php';
+    $config = require 'config.php';
     $passwordEncryptionKey = $config['passwordEncryptionKey'];
 
     $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
@@ -906,7 +906,7 @@ function encryptString($str): string {
 }
 
 function decryptCipher($cipher): string {
-    $config = require_once 'config.php';
+    $config = require 'config.php';
     $passwordEncryptionKey = $config['passwordEncryptionKey'];
 
     $cipher = base64_decode($cipher);
