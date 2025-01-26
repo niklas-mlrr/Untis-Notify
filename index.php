@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <title>test Notify</title>
+    <title>Untis Notify</title>
     <meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="apple-touch-icon" href="logo.svg">
     <link rel="icon" href="logo.svg" type="image/svg+xml">
@@ -31,16 +31,20 @@ if ($username && $password && $schoolUrl) {
 
     try {
         $sessionId = loginToWebUntis($username, $password, $schoolUrl);
+        echo "Session ID: " . $sessionId . "<br>";
 
         $conn = connectToDatabase();
-        var_dump($conn);
+
         $isUserInDatabaseAndAuthenticated = authenticateEncryptedPassword($conn, $username, $password);
+        echo "Is user in database and authenticated: " . ($isUserInDatabaseAndAuthenticated ? "true" : "false") . "<br>";
 
         if (!$isUserInDatabaseAndAuthenticated) {
             $passwordCipherAndHash = encryptAndHashPassword($password);
             if (empty(getRowsFromDatabase($conn, "users", ["username" => $username], $username))) {
+                echo "Inserting new user into database...<br>";
                 insertIntoDatabase($conn, "users", ["username", "password_cipher", "password_hash", "school_url"], [$username, $passwordCipherAndHash[0], $passwordCipherAndHash[1], $schoolUrl], $username);
             } else {
+                echo "Updating user in database...<br>";
                 updateDatabase($conn, "users", ["password_cipher", "password_hash"], ["username = ?"], [$passwordCipherAndHash[0], $passwordCipherAndHash[1], $username], $username);
             }
         }
