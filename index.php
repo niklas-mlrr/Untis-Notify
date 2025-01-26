@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <title>Untis Notify</title>
+    <title>test Notify</title>
     <meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="apple-touch-icon" href="logo.svg">
     <link rel="icon" href="logo.svg" type="image/svg+xml">
