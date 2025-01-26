@@ -689,10 +689,10 @@ function logOut(): void {
 function connectToDatabase(): mysqli {
     $config = require 'config.php';
 
-    echo $servername = $config['servername'];
-    echo $username = $config['username'];
-    echo $password = $config['password'];
-    echo $database = $config['database'];
+    $servername = $config['servername'];
+    $username = $config['username'];
+    $password = $config['password'];
+    $database = $config['database'];
 
     echo "connectToDatabase Mitte";
     // Verbindung erstellen
