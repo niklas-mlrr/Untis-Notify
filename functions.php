@@ -10,7 +10,6 @@ use Exceptions\DatabaseException;
 use Exceptions\UserException;
 
 
-
 const DATABASE_EXCEPTION_PREFIX = 'DatabaseException: ';
 const CURL_ERROR_PREFIX = 'Curl error: ';
 const PREPARE_FAILED_PREFIX = 'Prepare failed: ';
@@ -33,7 +32,7 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
         $students = getStudents($login, $username);
         $userId = getStudentIdByName($students, $username);
         $notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username], $username);
-    } catch (AuthenticationException | DatabaseException | UserException) {
+    } catch (AuthenticationException|DatabaseException|UserException) {
         return;
     }
 
@@ -98,7 +97,6 @@ function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $logi
 }
 
 
-
 /**
  * @param string $username
  * @param string $channel
@@ -119,20 +117,20 @@ function sendSlackMessage(string $username, string $channel, string $title, stri
     } catch (DatabaseException $e) {
         throw new DatabaseException(DATABASE_EXCEPTION_PREFIX . $e->getMessage());
     }
-    if(!$botToken) {
+    if (!$botToken) {
         Logger::log("No Slack Bot Token found", $username);
     }
 
-$weekday = match ((int)date('w', strtotime($date))) {
-    0 => "So",
-    1 => "Mo",
-    2 => "Di",
-    3 => "Mi",
-    4 => "Do",
-    5 => "Fr",
-    6 => "Sa",
-    default => " ",
-};
+    $weekday = match ((int)date('w', strtotime($date))) {
+        0 => "So",
+        1 => "Mo",
+        2 => "Di",
+        3 => "Mi",
+        4 => "Do",
+        5 => "Fr",
+        6 => "Sa",
+        default => " ",
+    };
 
     $forDate = match ($date) {
         date("Ymd") => "Heute: ",
@@ -181,7 +179,7 @@ $weekday = match ((int)date('w', strtotime($date))) {
         ),
         CURLOPT_POSTFIELDS => json_encode($payload)
     ));
-    
+
     $response = curl_exec($ch);
     $error = curl_error($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -189,21 +187,21 @@ $weekday = match ((int)date('w', strtotime($date))) {
 
     $date = date("d.m.Y", strtotime($date));
     $exactDate = date("d.m.Y H:i:s");
-    
+
     if ($error) {
         logNotificationToFile($exactDate, $date, $username, $channel, $title, $message, $error);
         Logger::log(CURL_ERROR_PREFIX . $error, $username);
         throw new Exception(CURL_ERROR_PREFIX . $error);
     }
-    
+
     $response_data = json_decode($response, true);
-    
+
     if ($http_code !== 200 || !$response_data['ok']) {
         logNotificationToFile($exactDate, $date, $username, $channel, $title, $message, $response_data);
         Logger::log(SLACK_API_ERROR . json_encode($response_data), $username);
         throw new Exception(SLACK_API_ERROR . json_encode($response_data));
     }
-    
+
     logNotificationToFile($exactDate, $date, $username, $channel, $title, $message, $response_data);
     return true;
 }
@@ -220,7 +218,7 @@ $weekday = match ((int)date('w', strtotime($date))) {
  * @return void
  */
 function logNotificationToFile($dateSent, $forDate, string $username, string $channel, string $title, string $message, $error): void {
-    if (is_array($error)){
+    if (is_array($error)) {
         $error = json_encode($error);
     }
     $logFile = 'Logs/' . date('Y-m-d') . '-notifications.log';
@@ -237,8 +235,6 @@ function logNotificationToFile($dateSent, $forDate, string $username, string $ch
 
     file_put_contents($logFile, $logEntry, FILE_APPEND);
 }
-
-
 
 
 /**
@@ -324,7 +320,6 @@ function sendApiRequest(string $sessionId, array $payload, string $username): ar
 }
 
 
-
 /**
  * @param string $sessionId
  * @param int $userId
@@ -332,8 +327,7 @@ function sendApiRequest(string $sessionId, array $payload, string $username): ar
  * @param string $username
  * @return array
  */
-function getTimetable(string $sessionId, int $userId, string $date, string $username): array
-{
+function getTimetable(string $sessionId, int $userId, string $date, string $username): array {
     $payload = [
         "id" => "getTimetable",
         "method" => "getTimetable",
@@ -368,8 +362,7 @@ function getTimetable(string $sessionId, int $userId, string $date, string $user
  * @param string $username
  * @return array
  */
-function getStudents(string $sessionId, string $username): array
-{
+function getStudents(string $sessionId, string $username): array {
     $payload = [
         "id" => "getStudents",
         "method" => "getStudents",
@@ -387,8 +380,7 @@ function getStudents(string $sessionId, string $username): array
  * @return string
  * @throws UserException
  */
-function getStudentIdByName(array $studentArray, string $name): string
-{
+function getStudentIdByName(array $studentArray, string $name): string {
     foreach ($studentArray as $student) {
         if ($student['name'] === $name) {
             return $student['id'];
@@ -397,7 +389,6 @@ function getStudentIdByName(array $studentArray, string $name): string
     Logger::log("Student not found: " . $name);
     throw new UserException("Student not found: " . $name);
 }
-
 
 
 $startTimes = [
@@ -414,11 +405,9 @@ $startTimes = [
 ];
 
 
-
 function cmp($a, $b) {
     return $a['lessonNum'] - $b['lessonNum'];
 }
-
 
 
 /**
@@ -428,7 +417,7 @@ function cmp($a, $b) {
 // Der ReplacementArray wird jedes Mal neu generiert,
 // da die direkte Benutzereingabe in der Db gespeichert wird,
 // da diese jederzeit vom Benutzer änderbar sein muss.
-function generateReplacementArray(string $replacements): array{
+function generateReplacementArray(string $replacements): array {
     if (!$replacements) {
         return [];
     }
@@ -445,7 +434,7 @@ function generateReplacementArray(string $replacements): array{
     array_splice($replacements, 0, count($replacements) / 2);
 
 
-    $replacements = array_map(function($value, $key) {
+    $replacements = array_map(function ($value, $key) {
         return [trim($key) => trim($value)];
     }, $replacements, array_keys($replacements));
 
@@ -467,14 +456,6 @@ function replaceSubjectWords(string $subject, string $replacements): string {
     }
     return str_replace(array_keys($replacements), array_values($replacements), $subject);
 }
-
-
-
-
-
-
-
-
 
 
 /**
@@ -544,7 +525,6 @@ function compareArrays($array1, $array2, $date): array {
 
     return $differences;
 }
-
 
 
 function findMissingItems($array1, $array2): array {
@@ -622,7 +602,7 @@ function handleDifference($subKey, $value, $newValue, $item): ?array {
  * @return array
  */
 function combineNotifications($differences): array {
-    if (empty($differences)){
+    if (empty($differences)) {
         return [];
     }
     $differencesOnlyLessonNum = [];
@@ -634,10 +614,10 @@ function combineNotifications($differences): array {
         $differencesWithoutLessonNum[] = $difference;
     }
 
-    for ($i = 0; $i < count($differencesWithoutLessonNum)-1; $i++){
-        if ($differencesWithoutLessonNum[$i]['title'] == $differencesWithoutLessonNum[$i+1]['title'] && $differencesWithoutLessonNum[$i]['channel'] == $differencesWithoutLessonNum[$i+1]['channel'] && $differencesWithoutLessonNum[$i]['message'] == $differencesWithoutLessonNum[$i+1]['message']){
-            $differences[$i]['title'] = $differencesOnlyLessonNum[$i] . ". & " . $differencesOnlyLessonNum[$i+1] . $differencesWithoutLessonNum[$i]['title'];
-            unset($differences[$i+1]);
+    for ($i = 0; $i < count($differencesWithoutLessonNum) - 1; $i++) {
+        if ($differencesWithoutLessonNum[$i]['title'] == $differencesWithoutLessonNum[$i + 1]['title'] && $differencesWithoutLessonNum[$i]['channel'] == $differencesWithoutLessonNum[$i + 1]['channel'] && $differencesWithoutLessonNum[$i]['message'] == $differencesWithoutLessonNum[$i + 1]['message']) {
+            $differences[$i]['title'] = $differencesOnlyLessonNum[$i] . ". & " . $differencesOnlyLessonNum[$i + 1] . $differencesWithoutLessonNum[$i]['title'];
+            unset($differences[$i + 1]);
         }
     }
     return $differences;
@@ -645,14 +625,14 @@ function combineNotifications($differences): array {
 
 
 function sendSlackMessages($differences, $username, $conn): void {
-    if (empty($differences)){
+    if (empty($differences)) {
         return;
     }
     $differencesCount = count($differences);
 
-    if($differencesCount >= 20){
+    if ($differencesCount >= 20) {
         $differences = [];
-        $differences[] = createDifference("sonstiges", "Zu viele Benachrichtigungen", "Das System wollte gerade ". $differencesCount . " Benachrichtigungen zu dir senden. Durch einen Sicherheitsmechanismus wurden diese abgefangen. Bitte wende dich an den Admin um zu erfahren, warum dir so viele Benachrichtigungen gesendet werden sollten");
+        $differences[] = createDifference("sonstiges", "Zu viele Benachrichtigungen", "Das System wollte gerade " . $differencesCount . " Benachrichtigungen zu dir senden. Durch einen Sicherheitsmechanismus wurden diese abgefangen. Bitte wende dich an den Admin um zu erfahren, warum dir so viele Benachrichtigungen gesendet werden sollten");
     }
 
     foreach ($differences as $difference) {
@@ -663,18 +643,6 @@ function sendSlackMessages($differences, $username, $conn): void {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /**
@@ -719,19 +687,22 @@ function logOut(): void {
  * @throws DatabaseException
  */
 function connectToDatabase(): mysqli {
-    $config = include 'config.php';
+    echo "connectToDatabase Anfang";
+    $config = require 'config.php';
 
     $servername = $config['servername'];
     $username = $config['username'];
     $password = $config['password'];
     $database = $config['database'];
 
+    echo "connectToDatabase Mitte";
     // Verbindung erstellen
     $conn = new mysqli($servername, $username, $password, $database);
     if ($conn->connect_error) {
         Logger::log("Db Connection failed: " . $conn->connect_error);
         throw new DatabaseException("Db Connection failed: " . $conn->connect_error);
     }
+    echo "connectToDatabase Ende";
     return $conn;
 }
 
@@ -774,8 +745,7 @@ function getRowsFromDatabase(mysqli $conn, string $table, array $inputsAndCondit
  * @return string|null
  * @throws DatabaseException
  */
-function getValueFromDatabase(mysqli $conn, string $table, string $dataFromColumn, array $inputsAndConditions, string $username): ?string
-{
+function getValueFromDatabase(mysqli $conn, string $table, string $dataFromColumn, array $inputsAndConditions, string $username): ?string {
     $conditions = [];
     $inputs = [];
 
@@ -898,8 +868,6 @@ function insertIntoDatabase(mysqli $conn, string $table, array $column, array $i
 }
 
 
-
-
 /**
  * Bereitet eine Datenbankanfrage vor und führt sie aus
  *
@@ -910,8 +878,7 @@ function insertIntoDatabase(mysqli $conn, string $table, array $column, array $i
  * @return bool
  * @throws DatabaseException
  */
-function prepareAndExecuteDbRequest(mysqli $conn, string $query, array $inputs, string $username): bool
-{
+function prepareAndExecuteDbRequest(mysqli $conn, string $query, array $inputs, string $username): bool {
     $types = str_repeat('s', count($inputs));
     $stmt = $conn->prepare($query);
     if (!$stmt) {
@@ -930,13 +897,6 @@ function prepareAndExecuteDbRequest(mysqli $conn, string $query, array $inputs, 
         throw new DatabaseException(PREPARE_FAILED_PREFIX . $conn->error);
     }
 }
-
-
-
-
-
-
-
 
 
 function encryptString($str): string {
@@ -961,9 +921,6 @@ function decryptCipher($cipher): string {
 
     return openssl_decrypt($encrypted, "AES-256-CBC", $passwordEncryptionKey, 0, $iv);
 }
-
-
-
 
 
 function encryptAndHashPassword($password): array {
@@ -1009,13 +966,11 @@ function authenticateEncryptedPassword(mysqli $conn, string $username, string $i
 }
 
 
-
 function checkIfURLExists($url): bool {
     $file_headers = @get_headers($url);
-    if(!$file_headers || $file_headers[0] == 'HTTP/1.1 404 Not Found') {
+    if (!$file_headers || $file_headers[0] == 'HTTP/1.1 404 Not Found') {
         $exists = false;
-    }
-    else {
+    } else {
         $exists = true;
     }
     return $exists;

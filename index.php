@@ -35,6 +35,7 @@ if ($username && $password && $schoolUrl) {
 
         $conn = connectToDatabase();
 
+
         $isUserInDatabaseAndAuthenticated = authenticateEncryptedPassword($conn, $username, $password);
         echo "Is user in database and authenticated: " . ($isUserInDatabaseAndAuthenticated ? "true" : "false") . "<br>";
 
