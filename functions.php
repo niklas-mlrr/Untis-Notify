@@ -24,7 +24,7 @@ const SLACK_API_ERROR = 'Slack API error: ';
  */
 function initiateCheck(mysqli $conn, string $username, string $password): void {
     $differences = [];
-    $date = "";
+
     try {
         $schoolUrl = getValueFromDatabase($conn, "users", "school_url", ["username" => $username], $username);
         $login = loginToWebUntis($username, $password, $schoolUrl);
@@ -896,7 +896,7 @@ function prepareAndExecuteDbRequest(mysqli $conn, string $query, array $inputs, 
 
 
 function encryptString($str): string {
-    $config = require 'config.php';
+    $config = require_once 'config.php';
     $passwordEncryptionKey = $config['passwordEncryptionKey'];
 
     $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
@@ -906,7 +906,7 @@ function encryptString($str): string {
 }
 
 function decryptCipher($cipher): string {
-    $config = require 'config.php';
+    $config = require_once 'config.php';
     $passwordEncryptionKey = $config['passwordEncryptionKey'];
 
     $cipher = base64_decode($cipher);
@@ -940,7 +940,6 @@ function authenticateEncryptedPassword(mysqli $conn, string $username, string $i
     $passwordHash = getValueFromDatabase($conn, "users", "password_hash", ["username" => $username], $username);
 
     if (!$encryptedPassword || !$passwordHash) {
-        Logger::log("Authentication failed: Encrypted Password or Password Hash not in Db", $username);
         return "";
     }
 
