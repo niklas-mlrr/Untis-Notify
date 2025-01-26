@@ -1,5 +1,6 @@
 # Ignoriere die Datei config.php
 config.php
+test.php
 
 # Ignoriere alle .log-Dateien
 *.log

@@ -24,7 +24,8 @@ const SLACK_API_ERROR = 'Slack API error: ';
  * @return void
  */
 function initiateCheck(mysqli $conn, string $username, string $password): void {
-    
+    $differences = [];
+    $date = "";
     try {
         $schoolUrl = getValueFromDatabase($conn, "users", "school_url", ["username" => $username], $username);
         $login = loginToWebUntis($username, $password, $schoolUrl);
@@ -48,8 +49,11 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
 
     for ($i = 0; $i < $notificationForDaysInAdvance; $i++) {
         $date = date("Ymd", strtotime("+$i days"));
-        checkCompareAndUpdateTimetable($date, $conn, $login, $userId, $username);
+        $differences = array_merge($differences, checkCompareAndUpdateTimetable($date, $conn, $login, $userId, $username));
     }
+
+
+    sendSlackMessages($differences, $username, $conn);
 }
 
 /**
@@ -58,9 +62,9 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
  * @param string $login
  * @param int $userId
  * @param string $username
- * @return void
+ * @return array
  */
-function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $login, int $userId, string $username): void {
+function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $login, int $userId, string $username): array {
     try {
         $timetable = getTimetable($login, $userId, $date, $username);
         $replacements = getValueFromDatabase($conn, "users", "dictionary", ["username" => $username], $username);
@@ -73,24 +77,24 @@ function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $logi
             if ($formatedTimetable != null) {
                 insertIntoDatabase($conn, "timetables", ["timetable_data", "for_date", "user"], [$formatedTimetable, $date, $username], $username);
             }
-            return;
+            return [];
         }
 
     } catch (DatabaseException) {
-        return;
+        return [];
     }
 
 
-    $compResult = compareArrays($lastRetrieval, $formatedTimetable, $date, $username, $conn);
+    $compResult = compareArrays($lastRetrieval, $formatedTimetable, $date);
 
-    if ($compResult) {
+    if ($compResult != null) {
         try {
             updateDatabase($conn, "timetables", ["timetable_data"], ["for_Date = ?", "user = ?"], [$formatedTimetable, $date, $username], $username);
         } catch (DatabaseException) {
-            return;
+            return [];
         }
     }
-
+    return $compResult;
 }
 
 
@@ -106,13 +110,17 @@ function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $logi
  * @throws DatabaseException
  * @throws Exception
  */
-function sendslackMessage(string $username, string $channel, string $title, string $message, $date, mysqli $conn): bool {
+function sendSlackMessage(string $username, string $channel, string $title, string $message, $date, mysqli $conn): bool {
+
     $url = 'https://slack.com/api/chat.postMessage';
 
     try {
         $botToken = getValueFromDatabase($conn, "users", "slack_bot_token", ["username" => $username], $username);
     } catch (DatabaseException $e) {
         throw new DatabaseException(DATABASE_EXCEPTION_PREFIX . $e->getMessage());
+    }
+    if(!$botToken) {
+        Logger::log("No Slack Bot Token found", $username);
     }
 
 $weekday = match ((int)date('w', strtotime($date))) {
@@ -417,7 +425,7 @@ function cmp($a, $b) {
  * @param string $replacements
  * @return array
  */
-// Der ReplacementArray wird jedes mal neu generiert,
+// Der ReplacementArray wird jedes Mal neu generiert,
 // da die direkte Benutzereingabe in der Db gespeichert wird,
 // da diese jederzeit vom Benutzer änderbar sein muss.
 function generateReplacementArray(string $replacements): array{
@@ -448,7 +456,6 @@ function generateReplacementArray(string $replacements): array{
 
 /**
  * Ersetzt vordefinierte Wörter im subject durch andere vordefinierte Wörter
- *
  * @param string $subject Das zu überprüfende Fach
  * @param string $replacements Das Array mit den Ersetzungen
  * @return string Das ersetzte Fach
@@ -519,11 +526,9 @@ function getFormatedTimetable(array $timetable, string $replacements): array {
  * @param $array1 (= lastRetrieval)
  * @param $array2 (= formatedTimetable)
  * @param $date
- * @param $username
- * @param $conn
- * @return bool
+ * @return array
  */
-function compareArrays($array1, $array2, $date, $username, $conn): bool {
+function compareArrays($array1, $array2, $date): array {
     $differences = [];
     list($canceledDifferences, $canceledLessons) = findCanceledItems($array1, $array2);
     $differences = array_merge($differences, $canceledDifferences);
@@ -532,9 +537,12 @@ function compareArrays($array1, $array2, $date, $username, $conn): bool {
     $differences = array_merge($differences, findNewItems($array1, $array2));
     $differences = combineNotifications($differences);
 
+    // Add the for_date to each entry
+    foreach ($differences as $key => $difference) {
+        $differences[$key]['date'] = $date;
+    }
 
-    sendSlackMessages($differences, $date, $username, $conn);
-    return !empty($differences);
+    return $differences;
 }
 
 
@@ -636,13 +644,20 @@ function combineNotifications($differences): array {
 }
 
 
-function sendSlackMessages($differences, $date, $username, $conn): void {
+function sendSlackMessages($differences, $username, $conn): void {
     if (empty($differences)){
         return;
     }
+    $differencesCount = count($differences);
+
+    if($differencesCount >= 20){
+        $differences = [];
+        $differences[] = createDifference("sonstiges", "Zu viele Benachrichtigungen", "Das System wollte gerade ". $differencesCount . " Benachrichtigungen zu dir senden. Durch einen Sicherheitsmechanismus wurden diese abgefangen. Bitte wende dich an den Admin um zu erfahren, warum dir so viele Benachrichtigungen gesendet werden sollten");
+    }
+
     foreach ($differences as $difference) {
         try {
-            sendslackMessage($username, $difference['channel'], $difference['title'], $difference['message'], $date, $conn);
+            sendSlackMessage($username, $difference['channel'], $difference['title'], $difference['message'], $difference['date'], $conn);
         } catch (DatabaseException|Exception) {
             continue;
         }
@@ -972,6 +987,7 @@ function authenticateEncryptedPassword(mysqli $conn, string $username, string $i
     $passwordHash = getValueFromDatabase($conn, "users", "password_hash", ["username" => $username], $username);
 
     if (!$encryptedPassword || !$passwordHash) {
+        Logger::log("Authentication failed: Encrypted Password or Password Hash not in Db", $username);
         return "";
     }
 
@@ -990,4 +1006,17 @@ function authenticateEncryptedPassword(mysqli $conn, string $username, string $i
         return "";
     }
     return $decryptedPassword;
+}
+
+
+
+function checkIfURLExists($url): bool {
+    $file_headers = @get_headers($url);
+    if(!$file_headers || $file_headers[0] == 'HTTP/1.1 404 Not Found') {
+        $exists = false;
+    }
+    else {
+        $exists = true;
+    }
+    return $exists;
 }

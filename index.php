@@ -21,6 +21,7 @@ $password = $_POST['password'] ?? null;
 $schoolUrl = $_POST['schoolUrl'] ?? null;
 
 
+
 if ($username && $password && $schoolUrl) {
     require_once "functions.php";
 
@@ -32,6 +33,7 @@ if ($username && $password && $schoolUrl) {
         $sessionId = loginToWebUntis($username, $password, $schoolUrl);
 
         $conn = connectToDatabase();
+        var_dump($conn);
         $isUserInDatabaseAndAuthenticated = authenticateEncryptedPassword($conn, $username, $password);
 
         if (!$isUserInDatabaseAndAuthenticated) {
@@ -115,6 +117,5 @@ if ($username && $password && $schoolUrl) {
     </form>
 </div>
 </body>
-
 <script src="script.js"></script>
 </html>

@@ -5,29 +5,35 @@ require_once __DIR__ . "/Exceptions/DatabaseException.php";
 
 use Exceptions\DatabaseException;
 
-try {
-    $conn = connectToDatabase();
-    $users = getRowsFromDatabase($conn, "users", ["setup_complete" => 1], "Cronjob");
-} catch (DatabaseException $e) {
-    exit();
-}
 
-foreach ($users as $user) {
-    $username = $user['username'];
-    $passwordCipher = $user['password_cipher'];
-    $password = decryptCipher($passwordCipher);
+if(!checkIfURLExists("https://niklas.craft.me/kill-switch")) {
+    Logger::log("The Kill-switch prevented the cronjob", "Cronjob");
+} else {
+
     try {
-        $passwordHash = getValueFromDatabase($conn, "users", "password_hash", ["username" => $username], $username);
+        $conn = connectToDatabase();
+        $users = getRowsFromDatabase($conn, "users", ["setup_complete" => 1], "Cronjob");
     } catch (DatabaseException $e) {
-        continue;
+        exit();
     }
 
-    if (!password_verify($password, $passwordHash)) {
-        Logger::log("Password verification failed", $username);
-        continue;
-    }
+    foreach ($users as $user) {
+        $username = $user['username'];
+        $passwordCipher = $user['password_cipher'];
+        $password = decryptCipher($passwordCipher);
+        try {
+            $passwordHash = getValueFromDatabase($conn, "users", "password_hash", ["username" => $username], $username);
+        } catch (DatabaseException $e) {
+            continue;
+        }
 
-    initiateCheck($conn, $username, $password);
+        if (!password_verify($password, $passwordHash)) {
+            Logger::log("Password verification failed", $username);
+            continue;
+        }
+
+        initiateCheck($conn, $username, $password);
+    }
+    $conn->close();
 }
 
-$conn->close();
