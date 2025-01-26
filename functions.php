@@ -687,13 +687,12 @@ function logOut(): void {
  * @throws DatabaseException
  */
 function connectToDatabase(): mysqli {
-    echo "connectToDatabase Anfang";
     $config = require 'config.php';
 
-    $servername = $config['servername'];
-    $username = $config['username'];
-    $password = $config['password'];
-    $database = $config['database'];
+    echo $servername = $config['servername'];
+    echo $username = $config['username'];
+    echo $password = $config['password'];
+    echo $database = $config['database'];
 
     echo "connectToDatabase Mitte";
     // Verbindung erstellen

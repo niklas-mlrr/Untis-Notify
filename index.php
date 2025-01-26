@@ -66,6 +66,7 @@ if ($username && $password && $schoolUrl) {
         $loginMessage = getMessageText("loginFailed");
     }
 
+
 } else {
     $loginMessage = '';
 }
