@@ -694,14 +694,11 @@ function connectToDatabase(): mysqli {
     $password = $config['password'];
     $database = $config['database'];
 
-    echo "connectToDatabase Mitte";
-    // Verbindung erstellen
     $conn = new mysqli($servername, $username, $password, $database);
     if ($conn->connect_error) {
         Logger::log("Db Connection failed: " . $conn->connect_error);
         throw new DatabaseException("Db Connection failed: " . $conn->connect_error);
     }
-    echo "connectToDatabase Ende";
     return $conn;
 }
 

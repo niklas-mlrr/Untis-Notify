@@ -31,21 +31,14 @@ if ($username && $password && $schoolUrl) {
 
     try {
         $sessionId = loginToWebUntis($username, $password, $schoolUrl);
-        echo "Session ID: " . $sessionId . "<br>";
-
         $conn = connectToDatabase();
 
-
         $isUserInDatabaseAndAuthenticated = authenticateEncryptedPassword($conn, $username, $password);
-        echo "Is user in database and authenticated: " . ($isUserInDatabaseAndAuthenticated ? "true" : "false") . "<br>";
-
         if (!$isUserInDatabaseAndAuthenticated) {
             $passwordCipherAndHash = encryptAndHashPassword($password);
             if (empty(getRowsFromDatabase($conn, "users", ["username" => $username], $username))) {
-                echo "Inserting new user into database...<br>";
                 insertIntoDatabase($conn, "users", ["username", "password_cipher", "password_hash", "school_url"], [$username, $passwordCipherAndHash[0], $passwordCipherAndHash[1], $schoolUrl], $username);
             } else {
-                echo "Updating user in database...<br>";
                 updateDatabase($conn, "users", ["password_cipher", "password_hash"], ["username = ?"], [$passwordCipherAndHash[0], $passwordCipherAndHash[1], $username], $username);
             }
         }
