@@ -1,9 +1,9 @@
 <?php
 
 require_once "ErrorLogger.php";
-require_once __DIR__ . "/Exceptions/AuthenticationException.php";
-require_once __DIR__ . "/Exceptions/DatabaseException.php";
-require_once __DIR__ . "/Exceptions/UserException.php";
+require_once "Exceptions/AuthenticationException.php";
+require_once "Exceptions/DatabaseException.php";
+require_once "Exceptions/UserException.php";
 
 use Exceptions\AuthenticationException;
 use Exceptions\DatabaseException;
