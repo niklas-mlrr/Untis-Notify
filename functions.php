@@ -11,7 +11,6 @@ if ($serverName === 'localhost' || $agentIsNotCronjob) {
 }
 
 
-
 require_once $baseDir . "/ErrorLogger.php";
 require_once $baseDir . "/config.php";
 require_once $baseDir . "/Exceptions/AuthenticationException.php";
