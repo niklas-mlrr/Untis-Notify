@@ -234,6 +234,9 @@ function logNotificationToFile($dateSent, $forDate, string $username, string $ch
         $error
     );
 
+    if (!file_exists($logFile)) {
+        touch($logFile);
+    }
     file_put_contents($logFile, $logEntry, FILE_APPEND);
 }
 

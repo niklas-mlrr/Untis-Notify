@@ -8,6 +8,9 @@ class ErrorLogger {
             $logMessage .= 'Username: ' . $username . '; ';
         }
         $logMessage .= $message . PHP_EOL;
+        if (!file_exists($logFile)) {
+            touch($logFile);
+        }
         file_put_contents($logFile, $logMessage, FILE_APPEND);
     }
 }
