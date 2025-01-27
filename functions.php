@@ -222,7 +222,6 @@ function logNotificationToFile($dateSent, $forDate, string $username, string $ch
     if (is_array($error)) {
         $error = json_encode($error);
     }
-    $logFile = 'Logs/' . date('Y-m-d') . '-notifications.log';
     $logEntry = sprintf(
         "[%s] ForDate: %s, Username: %s, Channel: %s, Title: %s, Message: %s, Slack API Response Data: %s\n",
         $dateSent,
@@ -234,9 +233,17 @@ function logNotificationToFile($dateSent, $forDate, string $username, string $ch
         $error
     );
 
+    $logDir = 'Logs';
+    $logFile = $logDir . '/' . date('Y-m-d') . '-notifications.log';
+
+    if (!file_exists($logDir)) {
+        mkdir($logDir, 0777, true);
+    }
+
     if (!file_exists($logFile)) {
         touch($logFile);
     }
+
     file_put_contents($logFile, $logEntry, FILE_APPEND);
 }
 
