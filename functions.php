@@ -9,6 +9,7 @@ if ($serverName === 'localhost') {
     $baseDir = __DIR__ . "/domains/untis-notify.de/public_html";
 }
 
+
 require_once "ErrorLogger.php";
 $config = require 'config.php';
 
