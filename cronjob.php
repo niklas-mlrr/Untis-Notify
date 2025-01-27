@@ -6,7 +6,7 @@ use Exceptions\DatabaseException;
 
 
 if(!checkIfURLExists("https://niklas.craft.me/kill-switch")) {
-    logger::log("The Kill-switch prevented the cronjob", "Cronjob");
+    ErrorLogger::log("The Kill-switch prevented the cronjob", "Cronjob");
 } else {
 
     try {
@@ -27,7 +27,7 @@ if(!checkIfURLExists("https://niklas.craft.me/kill-switch")) {
         }
 
         if (!password_verify($password, $passwordHash)) {
-            logger::log("Password verification failed", $username);
+            ErrorLogger::log("Password verification failed", $username);
             continue;
         }
 
