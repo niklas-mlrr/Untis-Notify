@@ -12,7 +12,7 @@ if ($serverName === 'localhost' || $agentIsNotCronjob) {
 
 
 require_once "ErrorLogger.php";
-$config = require 'config.php';
+require 'config.php';
 
 require_once $baseDir . "/Exceptions/AuthenticationException.php";
 require_once $baseDir . "/Exceptions/DatabaseException.php";
