@@ -2,7 +2,9 @@
 
 class ErrorLogger {
     public static function log($message, $username = null): void {
-        $logFile = 'Logs/' . date('Y-m-d') . '-log.log';
+
+        $logDir = __DIR__ . '/Logs';
+        $logFile = $logDir . '/' . date('Y-m-d') . '-log.log';
         $logMessage = '[' . date('d.m.Y H:i:s') . '] ';
         if ($username) {
             $logMessage .= 'Username: ' . $username . '; ';
