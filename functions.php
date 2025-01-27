@@ -1,20 +1,10 @@
 <?php
 
-$serverName = $_SERVER['SERVER_NAME'] ?? '';
-$agentIsNotCronjob = $_SERVER['HTTP_HOST'] ?? false;
-
-if ($serverName === 'localhost' || $agentIsNotCronjob) {
-    $baseDir = __DIR__;
-} else {
-    $baseDir = __DIR__ . "/domains/untis-notify.de/public_html";
-}
-
-
-require_once $baseDir . "/ErrorLogger.php";
-require_once $baseDir . "/config.php";
-require_once $baseDir . "/Exceptions/AuthenticationException.php";
-require_once $baseDir . "/Exceptions/DatabaseException.php";
-require_once $baseDir . "/Exceptions/UserException.php";
+require_once "ErrorLogger.php";
+require_once "config.php";
+require_once "Exceptions/AuthenticationException.php";
+require_once "Exceptions/DatabaseException.php";
+require_once "Exceptions/UserException.php";
 
 use Exceptions\AuthenticationException;
 use Exceptions\DatabaseException;

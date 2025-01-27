@@ -1,16 +1,6 @@
 <?php
 
-
-$serverName = $_SERVER['SERVER_NAME'] ?? '';
-$agentIsNotCronjob = $_SERVER['HTTP_HOST'] ?? false;
-
-if ($serverName === 'localhost' || $agentIsNotCronjob) {
-    $baseDir = __DIR__;
-} else {
-    $baseDir = __DIR__ . "/domains/untis-notify.de/public_html";
-}
-
-require_once $baseDir . "/functions.php";
+require_once "functions.php";
 
 use Exceptions\DatabaseException;
 

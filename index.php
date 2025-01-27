@@ -13,7 +13,7 @@
 
 <?php
 session_start();
-require_once __DIR__ . "/Exceptions/AuthenticationException.php";
+require_once "Exceptions/AuthenticationException.php";
 use Exceptions\AuthenticationException;
 
 $username = $_POST['username'] ?? null;
