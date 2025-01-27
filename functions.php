@@ -236,11 +236,6 @@ function logNotificationToFile($dateSent, $forDate, string $username, string $ch
     $logDir = __DIR__ . '/Logs';
     $logFile = $logDir . '/' . date('Y-m-d') . '-notifications.log';
 
-
-    if (!file_exists($logFile)) {
-        touch($logFile);
-    }
-
     file_put_contents($logFile, $logEntry, FILE_APPEND);
 }
 
