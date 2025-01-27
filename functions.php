@@ -233,7 +233,7 @@ function logNotificationToFile($dateSent, $forDate, string $username, string $ch
         $error
     );
 
-    $logDir = __DIR__ . 'Logs';
+    $logDir = __DIR__ . '/Logs';
     $logFile = $logDir . '/' . date('Y-m-d') . '-notifications.log';
 
 
