@@ -1,6 +1,5 @@
 <?php
 
-
 $serverName = $_SERVER['SERVER_NAME'] ?? '';
 $agentIsNotCronjob = $_SERVER['HTTP_HOST'] ?? false;
 
