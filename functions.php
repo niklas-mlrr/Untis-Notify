@@ -2,9 +2,11 @@
 
 require_once "ErrorLogger.php";
 
-require_once __DIR__ . "/Exceptions/AuthenticationException.php";
-require_once __DIR__ . "/Exceptions/DatabaseException.php";
-require_once __DIR__ . "/Exceptions/UserException.php";
+$baseDir = __DIR__ . "/domains/untis-notify.de/public_html";
+
+require_once $baseDir . "/Exceptions/AuthenticationException.php";
+require_once $baseDir . "/Exceptions/DatabaseException.php";
+require_once $baseDir . "/Exceptions/UserException.php";
 
 use Exceptions\AuthenticationException;
 use Exceptions\DatabaseException;
