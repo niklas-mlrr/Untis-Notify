@@ -2,9 +2,9 @@
 
 
 $serverName = $_SERVER['SERVER_NAME'] ?? '';
+$isOnPublicWebsite = $_SERVER['HTTP_HOST'] == 'untis-notify.de';
 
-
-if ($serverName === 'localhost' || $_SERVER['HTTP_HOST'] == 'untis-notify.de') {
+if ($serverName === 'localhost' || $isOnPublicWebsite) {
     $baseDir = __DIR__;
 } else {
     $baseDir = __DIR__ . "/domains/untis-notify.de/public_html";
