@@ -3,7 +3,8 @@
 
 $serverName = $_SERVER['SERVER_NAME'] ?? '';
 
-if ($serverName === 'localhost') {
+
+if ($serverName === 'localhost' || $_SERVER['HTTP_HOST'] == 'untis-notify.de') {
     $baseDir = __DIR__;
 } else {
     $baseDir = __DIR__ . "/domains/untis-notify.de/public_html";
