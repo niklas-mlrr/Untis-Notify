@@ -1,12 +1,16 @@
 <?php
 
 require_once "ErrorLogger.php";
+$config = require 'config.php';
 
-if ($_SERVER['SERVER_NAME'] === 'localhost') {
+$serverName = $_SERVER['SERVER_NAME'] ?? 'localhost';
+
+if ($serverName === 'localhost') {
     $baseDir = __DIR__;
 } else {
     $baseDir = __DIR__ . "/domains/untis-notify.de/public_html";
 }
+
 
 require_once $baseDir . "/Exceptions/AuthenticationException.php";
 require_once $baseDir . "/Exceptions/DatabaseException.php";
@@ -694,8 +698,7 @@ function logOut(): void {
  * @throws DatabaseException
  */
 function connectToDatabase(): mysqli {
-    $config = require 'config.php';
-
+    global $config;
     $servername = $config['servername'];
     $username = $config['username'];
     $password = $config['password'];
@@ -903,7 +906,7 @@ function prepareAndExecuteDbRequest(mysqli $conn, string $query, array $inputs, 
 
 
 function encryptString($str): string {
-    $config = require 'config.php';
+    global $config;
     $passwordEncryptionKey = $config['passwordEncryptionKey'];
 
     $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
@@ -913,7 +916,7 @@ function encryptString($str): string {
 }
 
 function decryptCipher($cipher): string {
-    $config = require 'config.php';
+    global $config;
     $passwordEncryptionKey = $config['passwordEncryptionKey'];
 
     $cipher = base64_decode($cipher);
