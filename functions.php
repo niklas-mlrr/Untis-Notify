@@ -2,9 +2,9 @@
 
 
 $serverName = $_SERVER['SERVER_NAME'] ?? '';
-$isOnPublicWebsite = $_SERVER['HTTP_HOST'] ?? false;
+$agentIsNotCronjob = $_SERVER['HTTP_HOST'] ?? false;
 
-if ($serverName === 'localhost' || !$isOnPublicWebsite) {
+if ($serverName === 'localhost' || $agentIsNotCronjob) {
     $baseDir = __DIR__;
 } else {
     $baseDir = __DIR__ . "/domains/untis-notify.de/public_html";
