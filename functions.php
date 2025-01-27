@@ -1,6 +1,6 @@
 <?php
 
-require_once "ErrorErrorLogger.php";
+require_once "ErrorLogger.php";
 require_once __DIR__ . "/Exceptions/AuthenticationException.php";
 require_once __DIR__ . "/Exceptions/DatabaseException.php";
 require_once __DIR__ . "/Exceptions/UserException.php";
