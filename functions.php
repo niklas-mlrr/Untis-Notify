@@ -1,6 +1,6 @@
 <?php
 
-require_once "Logger.php";
+require_once "ErrorLogger.php";
 require_once __DIR__ . "/Exceptions/AuthenticationException.php";
 require_once __DIR__ . "/Exceptions/DatabaseException.php";
 require_once __DIR__ . "/Exceptions/UserException.php";
@@ -43,7 +43,7 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
         deleteFromDatabase($conn, "timetables", ["for_date < ?"], [$currentDate], $username);
         deleteFromDatabase($conn, "timetables", ["for_Date >= ?", "user = ?"], [$maxDateToCheck, $username], $username);
     } catch (DatabaseException $e) {
-        Logger::log(DATABASE_EXCEPTION_PREFIX . "; Alte Stundenplandaten nicht erfolgreich gelöscht; " . $e->getMessage(), $username);
+        logger::log(DATABASE_EXCEPTION_PREFIX . "; Alte Stundenplandaten nicht erfolgreich gelöscht; " . $e->getMessage(), $username);
     }
 
     for ($i = 0; $i < $notificationForDaysInAdvance; $i++) {
@@ -118,7 +118,7 @@ function sendSlackMessage(string $username, string $channel, string $title, stri
         throw new DatabaseException(DATABASE_EXCEPTION_PREFIX . $e->getMessage());
     }
     if (!$botToken) {
-        Logger::log("No Slack Bot Token found", $username);
+        logger::log("No Slack Bot Token found", $username);
     }
 
     $weekday = match ((int)date('w', strtotime($date))) {
@@ -190,7 +190,7 @@ function sendSlackMessage(string $username, string $channel, string $title, stri
 
     if ($error) {
         logNotificationToFile($exactDate, $date, $username, $channel, $title, $message, $error);
-        Logger::log(CURL_ERROR_PREFIX . $error, $username);
+        logger::log(CURL_ERROR_PREFIX . $error, $username);
         throw new Exception(CURL_ERROR_PREFIX . $error);
     }
 
@@ -198,7 +198,7 @@ function sendSlackMessage(string $username, string $channel, string $title, stri
 
     if ($http_code !== 200 || !$response_data['ok']) {
         logNotificationToFile($exactDate, $date, $username, $channel, $title, $message, $response_data);
-        Logger::log(SLACK_API_ERROR . json_encode($response_data), $username);
+        logger::log(SLACK_API_ERROR . json_encode($response_data), $username);
         throw new Exception(SLACK_API_ERROR . json_encode($response_data));
     }
 
@@ -268,7 +268,7 @@ function loginToWebUntis(string $username, string $password, string $schoolUrl):
 
     if ($error) {
         curl_close($ch);
-        Logger::log(CURL_ERROR_PREFIX . $error, $username);
+        logger::log(CURL_ERROR_PREFIX . $error, $username);
         throw new AuthenticationException("Curl error: " . $error);
     }
 
@@ -279,7 +279,7 @@ function loginToWebUntis(string $username, string $password, string $schoolUrl):
         return $result['result']['sessionId'];
     }
 
-    Logger::log("AuthenticationException: Untis Login failed. Response: " . json_encode($result), $username);
+    logger::log("AuthenticationException: Untis Login failed. Response: " . json_encode($result), $username);
     throw new AuthenticationException("Untis Login failed. Response: " . json_encode($result));
 }
 
@@ -305,7 +305,7 @@ function sendApiRequest(string $sessionId, array $payload, string $username): ar
 
     if ($error) {
         curl_close($ch);
-        Logger::log(CURL_ERROR_PREFIX . $error, $username);
+        logger::log(CURL_ERROR_PREFIX . $error, $username);
     }
 
     $result = json_decode($response, true);
@@ -315,7 +315,7 @@ function sendApiRequest(string $sessionId, array $payload, string $username): ar
         return $result['result'];
     }
 
-    Logger::log("QueryException: API request failed. Response: " . json_encode($result), $username);
+    logger::log("QueryException: API request failed. Response: " . json_encode($result), $username);
     return [];
 }
 
@@ -386,7 +386,7 @@ function getStudentIdByName(array $studentArray, string $name): string {
             return $student['id'];
         }
     }
-    Logger::log("Student not found: " . $name);
+    logger::log("Student not found: " . $name);
     throw new UserException("Student not found: " . $name);
 }
 
@@ -696,7 +696,7 @@ function connectToDatabase(): mysqli {
 
     $conn = new mysqli($servername, $username, $password, $database);
     if ($conn->connect_error) {
-        Logger::log("Db Connection failed: " . $conn->connect_error);
+        logger::log("Db Connection failed: " . $conn->connect_error);
         throw new DatabaseException("Db Connection failed: " . $conn->connect_error);
     }
     return $conn;
@@ -775,7 +775,7 @@ function prepareDbRequestAndReturnData(mysqli $conn, string $query, string $user
 
     $stmt = $conn->prepare($query);
     if (!$stmt) {
-        Logger::log(PREPARE_FAILED_PREFIX . $conn->error, $username);
+        logger::log(PREPARE_FAILED_PREFIX . $conn->error, $username);
         throw new DatabaseException(PREPARE_FAILED_PREFIX . $conn->error);
     }
 
@@ -878,7 +878,7 @@ function prepareAndExecuteDbRequest(mysqli $conn, string $query, array $inputs, 
     $types = str_repeat('s', count($inputs));
     $stmt = $conn->prepare($query);
     if (!$stmt) {
-        Logger::log(PREPARE_FAILED_PREFIX . $conn->error, $username);
+        logger::log(PREPARE_FAILED_PREFIX . $conn->error, $username);
         throw new DatabaseException(PREPARE_FAILED_PREFIX . $conn->error);
     }
 
@@ -888,7 +888,7 @@ function prepareAndExecuteDbRequest(mysqli $conn, string $query, array $inputs, 
         $stmt->close();
         return true;
     } else {
-        Logger::log("Query execution failed: " . $stmt->error, $username);
+        logger::log("Query execution failed: " . $stmt->error, $username);
         $stmt->close();
         throw new DatabaseException(PREPARE_FAILED_PREFIX . $conn->error);
     }
@@ -945,7 +945,7 @@ function authenticateEncryptedPassword(mysqli $conn, string $username, string $i
 
     // Passwort-Hash überprüfen
     if (!password_verify($inputPassword, $passwordHash)) {
-        Logger::log("Authentication failed: Password hash verification failed", $username);
+        logger::log("Authentication failed: Password hash verification failed", $username);
     }
 
     // Passwort entschlüsseln
@@ -954,7 +954,7 @@ function authenticateEncryptedPassword(mysqli $conn, string $username, string $i
     // Passwort vergleichen
     $isAuthenticated = $decryptedPassword === $inputPassword;
     if (!$isAuthenticated) {
-        Logger::log("Authentication failed: Decrypted password does not match", $username);
+        logger::log("Authentication failed: Decrypted password does not match", $username);
         return "";
     }
     return $decryptedPassword;
