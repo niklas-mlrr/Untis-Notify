@@ -1,6 +1,5 @@
 <?php
 require_once "functions.php";
-require_once "Logger.php";
 require_once __DIR__ . "/Exceptions/DatabaseException.php";
 
 use Exceptions\DatabaseException;
