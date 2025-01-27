@@ -1,9 +1,7 @@
 <?php
 
-require_once "ErrorLogger.php";
-$config = require 'config.php';
 
-$serverName = $_SERVER['SERVER_NAME'] ?? 'localhost';
+$serverName = $_SERVER['SERVER_NAME'] ?? '';
 
 if ($serverName === 'localhost') {
     $baseDir = __DIR__;
@@ -11,6 +9,8 @@ if ($serverName === 'localhost') {
     $baseDir = __DIR__ . "/domains/untis-notify.de/public_html";
 }
 
+require_once "ErrorLogger.php";
+$config = require 'config.php';
 
 require_once $baseDir . "/Exceptions/AuthenticationException.php";
 require_once $baseDir . "/Exceptions/DatabaseException.php";
