@@ -91,7 +91,7 @@ function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $logi
         try {
             updateDatabase($conn, "timetables", ["timetable_data"], ["for_Date = ?", "user = ?"], [$formatedTimetable, $date, $username], $username);
         } catch (DatabaseException) {
-            return [];
+            ErrorLogger::log(DATABASE_EXCEPTION_PREFIX . "Stundenplandaten nicht erfolgreich aktualisiert", $username);
         }
     }
     return $compResult;
@@ -468,28 +468,23 @@ function replaceSubjectWords(string $subject, string $replacements): string {
  */
 function getFormatedTimetable(array $timetable, string $replacements): array {
     global $startTimes;
+    $timetable = removeDuplicateLessons($timetable);
     $numOfLessons = count($timetable);
     $formatedTimetable = [];
-    $seenLessons = [];
 
     for ($i = 0; $i < $numOfLessons; $i++) {
         $lessonNum = $startTimes[$timetable[$i]["startTime"]] ?? "notSet";
 
-        if (in_array($lessonNum, $seenLessons)) {
-            foreach ($formatedTimetable as $key => $lesson) {
-                if ($lesson['lessonNum'] == $lessonNum) {
-                    unset($formatedTimetable[$key]);
-                    break;
-                }
-            }
+        if (isset($timetable[$i]["code"])) {
+            $canceled = ($timetable[$i]["code"] == "cancelled") ? 1 : 0;
+        } else {
+            $canceled = 0;
         }
-
-        $canceled = isset($timetable[$i]["code"]) ? 1 : 0;
 
         $lesson = [
             "canceled" => $canceled,
             "lessonNum" => $lessonNum,
-            "subject" => $timetable[$i]["su"][0]["longname"] ?? "notSet",
+            "subject" => $timetable[$i]["su"][0]["longname"] ?? (($timetable[$i]["code"] == "irregular") ? "Veranstaltung" : "notSet"),
             "teacher" => $timetable[$i]["te"][0]["name"] ?? "notSet",
             "room" => $timetable[$i]["ro"][0]["name"] ?? "notSet",
         ];
@@ -497,13 +492,54 @@ function getFormatedTimetable(array $timetable, string $replacements): array {
         $lesson["subject"] = replaceSubjectWords($lesson["subject"], $replacements);
 
         $formatedTimetable[] = $lesson;
-        $seenLessons[] = $lessonNum;
     }
 
     usort($formatedTimetable, "cmp");
 
     return $formatedTimetable;
 }
+
+
+
+function removeDuplicateLessons($timeTable): array {
+    $newTimeTable = [];
+    $lessonNums = [];
+
+    foreach ($timeTable as $lesson) {
+        $lessonNum = $lesson["startTime"];
+        if (in_array($lessonNum, $lessonNums)) {
+            $indexOfExistingInstance = array_search($lessonNum, array_column($newTimeTable, "startTime"));
+            $indexOfFirstInstance = array_search($lessonNum, array_column($timeTable, "startTime"));
+            $indexOfSecondInstance = array_search($lessonNum, array_column(array_slice($timeTable, $indexOfFirstInstance + 1), "startTime")) + $indexOfFirstInstance + 1;
+
+            $lesson = chooseNotCanceledLesson($timeTable[$indexOfFirstInstance], $timeTable[$indexOfSecondInstance]);
+            unset($newTimeTable[$indexOfExistingInstance]);
+        } else {
+            $lessonNums[] = $lessonNum;
+        }
+        $newTimeTable[] = $lesson;
+    }
+
+    return array_values($newTimeTable);
+}
+
+function chooseNotCanceledLesson(array $lesson1, array $lesson2): ?array {
+    $canceled1 = ($lesson1['code'] == "cancelled") ? 1 : 0;
+    $canceled2 = ($lesson2['code'] == "cancelled") ? 1 : 0;
+
+
+    if (!$canceled1) {
+        // Only lesson1 does not have "code" set
+        return $lesson1;
+    } elseif (!$canceled2) {
+        // Only lesson2 does not have "code" set
+        return $lesson2;
+    } else {
+        // Both lessons have "code" set
+        return $lesson1;
+    }
+}
+
 
 
 /**
@@ -514,10 +550,11 @@ function getFormatedTimetable(array $timetable, string $replacements): array {
  */
 function compareArrays($array1, $array2, $date): array {
     $differences = [];
+    $fachwechselLessons = [];
     list($canceledDifferences, $canceledLessons) = findCanceledItems($array1, $array2);
     $differences = array_merge($differences, $canceledDifferences);
     $differences = array_merge($differences, findMissingItems($array1, $array2));
-    $differences = array_merge($differences, findChangedItems($array1, $array2, $canceledLessons));
+    $differences = array_merge($differences, findChangedItems($array1, $array2, $canceledLessons, $fachwechselLessons));
     $differences = array_merge($differences, findNewItems($array1, $array2));
     $differences = combineNotifications($differences);
 
@@ -557,22 +594,25 @@ function findCanceledItems($array1, $array2): array {
     return [$differences, $canceledLessons];
 }
 
-function findChangedItems($array1, $array2, $canceledLessons): array {
+function findChangedItems($array1, $array2, $canceledLessons, &$fachwechselLessons): array {
+
+
     $differences = [];
     foreach ($array1 as $key => $item) {
-        if (isset($array2[$key]) && !in_array($item['lessonNum'], $canceledLessons)) {
+        if (isset($array2[$key]) && !in_array($item['lessonNum'], $canceledLessons) && !in_array($item['lessonNum'], $fachwechselLessons)) {
             foreach ($item as $subKey => $value) {
                 if ($value != "notSet" && !isset($value)) {
                     $differences[] = createDifference("sonstiges", "Eigenschaft \"$subKey\" fehlt in der {$item['lessonNum']}. Stunde", " ");
                 } elseif ($array2[$key][$subKey] !== $value) {
-                    $differences[] = handleDifference($subKey, $value, $array2[$key][$subKey], $item);
+                    if(!in_array($item['lessonNum'], $fachwechselLessons)) {
+                        $differences[] = handleDifference($subKey, $value, $array2[$key][$subKey], $item, $fachwechselLessons);
+                    }
                 }
             }
         }
     }
     return $differences;
 }
-
 function findNewItems($array1, $array2): array {
     $differences = [];
     foreach ($array2 as $key => $item) {
@@ -587,15 +627,19 @@ function createDifference($channel, $title, $message): array {
     return ['channel' => $channel, 'title' => $title, 'message' => $message];
 }
 
-function handleDifference($subKey, $value, $newValue, $item): ?array {
+function handleDifference($subKey, $value, $newValue, $item, &$fachwechselLessons): ?array {
     $lessonNum = $item['lessonNum'];
     $subject = $item['subject'];
+
+    if($subKey == "subject") {
+        $fachwechselLessons[] = $lessonNum;
+    }
 
     return match ($subKey) {
         "canceled" => $value == 1 ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Jetzt kein Ausfall mehr") : createDifference("ausfall", "$lessonNum. Stunde $subject", " "),
         "teacher" => $newValue == "---" ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Lehrer ausgetragen (Vorher: $value)") : createDifference("vertretung", "$lessonNum. Stunde $subject", "Vorher: $value; Jetzt: $newValue"),
         "room" => $newValue == "---" ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Raum ausgetragen (Vorher: $value)") : createDifference("raumänderung", "$lessonNum. Stunde $subject", "Vorher: $value; Jetzt: $newValue"),
-        "subject" => $newValue == "---" ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Fach ausgetragen (Vorher: $value)") : createDifference("sonstiges", "$lessonNum. Stunde $subject", "Fachwechsel; Vorher: $value; Jetzt: $newValue"),
+        "subject" => $newValue == "---" ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Fach ausgetragen (Vorher: $value)") : createDifference("sonstiges", "$lessonNum. Stunde", "Fachwechsel; Vorher: $value; Jetzt: $newValue"),
         default => null,
     };
 }
