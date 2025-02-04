@@ -595,8 +595,6 @@ function findCanceledItems($array1, $array2): array {
 }
 
 function findChangedItems($array1, $array2, $canceledLessons, &$fachwechselLessons): array {
-
-
     $differences = [];
     foreach ($array1 as $key => $item) {
         if (isset($array2[$key]) && !in_array($item['lessonNum'], $canceledLessons) && !in_array($item['lessonNum'], $fachwechselLessons)) {

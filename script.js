@@ -49,7 +49,7 @@ document.querySelector('form').addEventListener('submit', function() {
 
 
 
-document.addEventListener('DOMContentLoaded', (event) => {
+document.addEventListener('DOMContentLoaded', () => {
     const toggleButton = document.getElementById('toggle-theme');
     const toggleIcon = document.querySelector('.dark-mode-switch-icon');
     const navigateBackButton = document.querySelector('.navigate-back-icon');
@@ -103,8 +103,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
 
 function togglePasswordVisibility() {
-    var passwordField = document.getElementById('password');
-    var toggleIcon = document.getElementById('toggleIcon');
+    let passwordField = document.getElementById('password');
+    let toggleIcon = document.getElementById('toggleIcon');
     if (passwordField.type === 'password') {
         passwordField.type = 'text';
         toggleIcon.classList.remove('fa-eye-slash');

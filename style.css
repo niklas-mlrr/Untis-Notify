@@ -1,4 +1,4 @@
-:root {
+:root { /* Default for light mode */
     --background-color: #f4f4f4;
     --text-color: black;
     --header-background-color: lightgray;
@@ -17,6 +17,7 @@
     --btn-delete-acc-background-color: #ff642b;
     --btn-admin-panel-background-color: #ff7833;
     --slider-thumb-color: #4e4e4e;
+    --calendar-icon-filter: invert(0);
 }
 
 body {
@@ -54,6 +55,7 @@ body.dark-mode {
     --btn-delete-acc-background-color: #a22b1a;
     --btn-admin-panel-background-color: #ff7833;
     --slider-thumb-color: #dadada;
+    --calendar-icon-filter: invert(1);
 }
 
 .parent {
@@ -325,7 +327,7 @@ input[type="range"]:focus {
 }
 
 .info-icon-slider {
-    margin-top: 7.5px;
+    margin-top: 8px;
 }
 
 
@@ -532,6 +534,17 @@ input[type="range"]:focus {
     color: var(--text-color);
     font-size: 1em;
     cursor: pointer;
+    position: relative;
+}
+
+.for-date-input::-webkit-calendar-picker-indicator {
+    filter: var(--calendar-icon-filter);
+    cursor: pointer;
+}
+
+.for-date-input::-webkit-inner-spin-button,
+.for-date-input::-webkit-clear-button {
+    display: none;
 }
 
 .for-date-input:focus {
