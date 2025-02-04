@@ -36,6 +36,10 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = $_POST['title'] ?? null;
     $message = $_POST['message'] ?? null;
 
+    $title = trim($title);
+    $message = trim($message);
+    
+
     $title = $title . "; ";
 
     try {
