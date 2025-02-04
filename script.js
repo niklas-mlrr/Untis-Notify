@@ -30,6 +30,8 @@ function openExternInfoSite(info) {
         case "dictionary":
             url = "https://github.com/niklas-mlrr/Untis-Notify/wiki/Personalisierbares-Dictionary-(optional)";
             break;
+        case "schoolUrl":
+            url = "admin.php";
 
     }
     window.open(url, '_blank');
@@ -47,33 +49,56 @@ document.querySelector('form').addEventListener('submit', function() {
 
 
 
-document.addEventListener('DOMContentLoaded', () => {
-    const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const currentTheme = localStorage.getItem('theme');
-
+document.addEventListener('DOMContentLoaded', (event) => {
     const toggleButton = document.getElementById('toggle-theme');
-    const toggleIcon = toggleButton.querySelector('.dark-mode-switch-icon');
+    const toggleIcon = document.querySelector('.dark-mode-switch-icon');
+    const navigateBackButton = document.querySelector('.navigate-back-icon');
 
-    if (currentTheme === 'dark' || (prefersDarkScheme && currentTheme === null)) {
+    if (!toggleButton) {
+        console.error('toggleButton not found in the DOM');
+        return;
+    }
+    if (!toggleIcon) {
+        console.error('toggleIcon not found in the DOM');
+        return;
+    }
+
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    if (currentTheme === 'dark') {
         document.body.classList.add('dark-mode');
         toggleIcon.classList.add('dark-mode-switch-icon-white');
+        if (navigateBackButton) {
+            navigateBackButton.classList.add('navigate-back-icon-white');
+        }
     } else if (currentTheme === 'light') {
         document.body.classList.remove('dark-mode');
         toggleIcon.classList.remove('dark-mode-switch-icon-white');
+        if (navigateBackButton) {
+            navigateBackButton.classList.remove('navigate-back-icon-white');
+        }
     }
 
-    toggleButton.addEventListener('click', () => {
-        event.preventDefault(); // Verhindert das Standardverhalten des Buttons
-        console.log("test");
-        if(!window.location.href.includes("impressum.php")) {
-            document.body.classList.toggle('dark-mode');
-            const theme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
-            localStorage.setItem('theme', theme);
-            toggleIcon.classList.toggle('dark-mode-switch-icon-white');
-        } else {
-            window.location.replace("index.php");
+    toggleButton.addEventListener('click', (event) => {
+        event.preventDefault(); // Prevents the default behavior of the button
+        document.body.classList.toggle('dark-mode');
+        const theme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+        localStorage.setItem('theme', theme);
+        toggleIcon.classList.toggle('dark-mode-switch-icon-white');
+        if (navigateBackButton) {
+            navigateBackButton.classList.toggle('navigate-back-icon-white');
         }
     });
+
+    if (navigateBackButton) {
+        navigateBackButton.addEventListener('click', (event) => {
+            event.preventDefault(); // Prevents the default behavior of the button
+            if (window.location.href.includes("impressum.php")) {
+                window.location.href = 'index.php';
+            } else if (window.location.href.includes("admin.php")) {
+                window.location.href = 'settings.php';
+            }
+        });
+    }
 });
 
 

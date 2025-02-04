@@ -13,6 +13,7 @@
 
 <?php
 session_start();
+
 require_once "Exceptions/AuthenticationException.php";
 use Exceptions\AuthenticationException;
 
@@ -33,6 +34,7 @@ if ($username && $password && $schoolUrl) {
         $sessionId = loginToWebUntis($username, $password, $schoolUrl);
         $conn = connectToDatabase();
 
+
         $isUserInDatabaseAndAuthenticated = authenticateEncryptedPassword($conn, $username, $password);
         if (!$isUserInDatabaseAndAuthenticated) {
             $passwordCipherAndHash = encryptAndHashPassword($password);
@@ -42,6 +44,7 @@ if ($username && $password && $schoolUrl) {
                 updateDatabase($conn, "users", ["password_cipher", "password_hash"], ["username = ?"], [$passwordCipherAndHash[0], $passwordCipherAndHash[1], $username], $username);
             }
         }
+
 
         $_SESSION['username'] = $username;
         $_SESSION['password'] = $password;
@@ -73,7 +76,7 @@ if ($username && $password && $schoolUrl) {
 
 <div class="parent">
     <form action="index.php" method="post">
-        <button id="toggle-theme" class="dark-mode-switch-btn">
+        <button id="toggle-theme" class="dark-mode-switch-btn" type="button">
             <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
         </button>
         <h2>Untis Notify</h2>
@@ -87,7 +90,7 @@ if ($username && $password && $schoolUrl) {
             <span class="info-icon" onclick="toggleInfo('info-schoolUrl')" onKeyDown="toggleInfo('info-schoolUrl')">?</span>
         </div>
         <div class="info-field" id="info-schoolUrl">
-            <p>Dies ist eine schulspezifische URL. <br> Wenn du auf dem TRG bist, musst du hier nichts eingeben.</p>
+            <p>Dies ist eine schulspezifische URL. <br> Wenn du auf dem TRG bist, musst du hier nichts eingeben bzw. das Feld muss leer gelassen werden.</p>
         </div>
         <br>
 

@@ -711,6 +711,9 @@ function getMessageText($case): string {
         "testNotificationSonstigesNotSent" => '<p class="failed">Fehler beim Senden der Testbenachrichtigung für den Channel sonstiges</p>',
         "dbError" => '<p class="failed">Fehler beim Abrufen der Daten aus der Datenbank</p>',
         "dbConnError" => '<p class="failed">Fehler beim Herstellen der Verbindung zur Datenbank</p>',
+        "emptyFields" => '<p class="failed">Bitte fülle alle Felder aus</p>',
+        "messageSentSuccessfully" => '<p class="successful">Nachricht erfolgreich gesendet</p>',
+        "messageNotSent" => '<p class="failed">Fehler beim Senden der Nachricht</p>',
         default => "",
     };
 }

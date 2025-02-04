@@ -12,9 +12,16 @@
 <body>
     <div class="parent">
         <form>
-        <button id="toggle-theme" class="dark-mode-switch-btn">
-            <img src="https://img.icons8.com/?size=100&id=26194&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
+        <button id="toggle-theme" class="dark-mode-switch-btn dark-mode-switch-btn-potential-small">
+            <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
         </button>
+
+        <button id="navigate-back-btn" class="navigate-back-btn">
+            <img src="https://img.icons8.com/?size=100&id=26194&format=png&color=0000009C" alt="navigate-back-icon" class="navigate-back-icon">
+        </button>
+
+
+
 
         <h3>Impressum</h3>
             <p>Angaben gemäß § 5 DDG</p>

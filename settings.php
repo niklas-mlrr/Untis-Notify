@@ -116,6 +116,10 @@ if (isset($_POST['action'])) {
                 $btnResponse = getMessageText("testNotificationAllNotSent");
                 break;
             }
+        case 'adminPanel':
+            $conn->close();
+            header("Location: admin.php");
+            exit();
         default:
             break;
     }
@@ -127,7 +131,7 @@ if (isset($_POST['action'])) {
 
 <div class="parent parent-settings">
     <form action="settings.php" method="post">
-        <button id="toggle-theme" class="dark-mode-switch-btn">
+        <button id="toggle-theme" class="dark-mode-switch-btn" type="button">
             <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
         </button>
         <h2>Einstellungen</h2>
@@ -165,6 +169,14 @@ if (isset($_POST['action'])) {
             <button class="btn-log-out btn" type="submit" name="action" value="logout">Abmelden</button>
             <button class="btn-delete-acc btn" type="submit" name="action" value="deleteAccount">Konto löschen</button>
         </nobr>
+
+        <?php
+        if ($username === "MüllerNik") {
+            echo '<br><button class="admin-panel-btn btn" name="action" value="adminPanel">Admin Panel</button>';
+
+        }
+        ?>
+
     </form>
 </div>
 </body>

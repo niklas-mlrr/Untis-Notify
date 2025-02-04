@@ -15,6 +15,7 @@
     --btn-save-settings-background-color: #45a049;
     --btn-log-out-background-color: #b1b5b3;
     --btn-delete-acc-background-color: #ff642b;
+    --btn-admin-panel-background-color: #ff7833;
     --slider-thumb-color: #4e4e4e;
 }
 
@@ -51,6 +52,7 @@ body.dark-mode {
     --btn-save-settings-background-color: #357a38;
     --btn-log-out-background-color: #444;
     --btn-delete-acc-background-color: #a22b1a;
+    --btn-admin-panel-background-color: #ff7833;
     --slider-thumb-color: #dadada;
 }
 
@@ -277,19 +279,30 @@ input[type="range"]:focus {
     align-items: center;
 }
 
+.admin-panel-btn {
+    color: var(--text-color);
+    background-color: var(--btn-admin-panel-background-color);
+    width: 100%;
+}
+
+
 .info-field {
     display: none;
     background-color: var(--info-field-background-color);
     border: 1px solid var(--info-field-border-color);
 
     font-size: 0.8em;
-    width: 92.5%;
+    width: 97.5%;
     padding: 3px;
     -webkit-padding-before: 3px;
     -webkit-padding-after: 3px;
 
     margin: 0;
     border-radius: 5px;
+}
+
+.info-field p {
+    margin: 4px;
 }
 
 .info-icon {
@@ -347,6 +360,40 @@ input[type="range"]:focus {
 }
 
 
+
+
+
+
+
+.dark-mode-switch-btn {
+    background: none;
+    border: none;
+
+    position: absolute;
+    top: 25px;
+    right: 3%;
+    cursor: pointer;
+    z-index: 100;
+}
+
+.dark-mode-switch-btn-potential-small {
+    right: 0.5%;
+}
+
+.dark-mode-switch-icon {
+    width: 40px;
+    height: 40px;
+}
+
+.dark-mode-switch-icon-white {
+    filter: invert(1);
+}
+
+
+
+
+
+
 @media (max-width: 600px) {
     body {
         flex-direction: column;
@@ -362,6 +409,10 @@ input[type="range"]:focus {
     .parent-settings {
         margin-top: 0;
     }
+
+    .dark-mode-switch-btn-potential-small {
+        right: 3%;
+    }
 }
 
 .info-text {
@@ -370,33 +421,25 @@ input[type="range"]:focus {
 }
 
 
-.dark-mode-switch-btn {
+
+
+
+
+
+
+
+.navigate-back-btn {
     background: none;
     border: none;
 
     position: absolute;
-    top: 33px;
-    left: -0.5%;
+    top: 25px;
+    left: 0.5%;
     cursor: pointer;
     z-index: 100;
-}
 
-
-.dark-mode-switch-icon {
     width: 40px;
     height: 40px;
-}
-.dark-mode-switch-icon-white {
-    filter: invert(1);
-}
-
-
-.dark-mode-switch-icon:hover {
-    filter: invert(0.25);
-}
-
-.dark-mode-switch-icon-white:hover {
-    filter: invert(0.75);
 }
 
 
@@ -410,20 +453,18 @@ input[type="range"]:focus {
 }
 
 
-.impressum {
-    margin-top: 50px;
-    padding: 20px;
-    background-color: var(--form-background-color);
-    border-top: 1px solid #ddd;
+
+
+
+.dark-mode-switch-icon:hover {
+    filter: invert(0.25);
 }
 
-.impressum h3 {
-    margin-top: 0;
+.dark-mode-switch-icon-white:hover {
+    filter: invert(0.75);
 }
 
-.impressum p {
-    margin: 5px 0;
-}
+
 
 .email {
     color: var(--email-link-color);
@@ -438,3 +479,63 @@ input[type="range"]:focus {
     cursor: pointer;
     color: var(--text-color);
 }
+
+
+.custom-message-select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid var(--input-border-color);
+    border-radius: 5px;
+    background-color: var(--input-background-color);
+    color: var(--text-color);
+    font-size: 1em;
+    cursor: pointer;
+}
+
+.custom-message-select:focus {
+    outline: none;
+    border-color: var(--button-background-color);
+}
+
+.custom-message-select option {
+    background-color: var(--input-background-color);
+    color: var(--text-color);
+}
+
+
+
+.message-textarea {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid var(--input-border-color);
+    border-radius: 5px;
+    background-color: var(--input-background-color);
+    color: var(--text-color);
+    font-size: 1em;
+    resize: vertical;
+}
+
+.message-textarea:focus {
+    outline: none;
+    border-color: var(--button-background-color);
+}
+
+.for-date-input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid var(--input-border-color);
+    border-radius: 5px;
+    background-color: var(--input-background-color);
+    color: var(--text-color);
+    font-size: 1em;
+    cursor: pointer;
+}
+
+.for-date-input:focus {
+    outline: none;
+    border-color: var(--button-background-color);
+}
+
