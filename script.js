@@ -63,14 +63,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    const currentTheme = localStorage.getItem('theme') || 'light';
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const savedTheme = localStorage.getItem('theme');
+    const currentTheme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+
     if (currentTheme === 'dark') {
         document.body.classList.add('dark-mode');
         toggleIcon.classList.add('dark-mode-switch-icon-white');
         if (navigateBackButton) {
             navigateBackButton.classList.add('navigate-back-icon-white');
         }
-    } else if (currentTheme === 'light') {
+    } else {
         document.body.classList.remove('dark-mode');
         toggleIcon.classList.remove('dark-mode-switch-icon-white');
         if (navigateBackButton) {
