@@ -55,7 +55,7 @@ if ($username && $password && $schoolUrl) {
         updateDatabase($conn, "users", ["last_login"], ["username = ?"], [$currentTimestamp, $username], $username);
 
         $conn->close();
-        header("Location: settings.php");
+        header("Location: settings");
         exit();
 
     } catch (AuthenticationException | Exception $e) {
@@ -74,8 +74,8 @@ if ($username && $password && $schoolUrl) {
 <br><br>
 <p class="notification-text">↑ Beispiel einer Benachrichtigung ↑</p>
 
-<div class="parent">
-    <form action="index.php" method="post">
+<div class="parent parent-index">
+    <form action="login" method="post">
         <button id="toggle-theme" class="dark-mode-switch-btn" type="button">
             <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
         </button>
@@ -90,7 +90,7 @@ if ($username && $password && $schoolUrl) {
             <span class="info-icon" onclick="toggleInfo('info-schoolUrl')" onKeyDown="toggleInfo('info-schoolUrl')">?</span>
         </div>
         <div class="info-field" id="info-schoolUrl">
-            <p>Dies ist eine schulspezifische URL. <br> Wenn du auf dem TRG bist, musst du hier nichts eingeben bzw. das Feld muss leer gelassen werden.</p>
+            <p>Dies ist eine schulspezifische URL. <br> Wenn du auf dem TRG bist, musst du hier nichts eintragen bzw. das Feld muss leer gelassen werden.</p>
         </div>
         <br>
 
@@ -115,7 +115,7 @@ if ($username && $password && $schoolUrl) {
         <br><br>
         <?php echo $loginMessage; ?>
 
-        <a class="info-text" href="impressum.php">Impressum</a>
+        <a class="info-text" href="impressum">Impressum</a>
     </form>
 </div>
 </body>

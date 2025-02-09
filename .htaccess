@@ -1,0 +1,6 @@
+RewriteEngine On
+RewriteRule ^settings$ settings.php [L]
+RewriteRule ^login$ index.php [L]
+RewriteRule ^admin$ admin.php [L]
+RewriteRule ^impressum$ impressum.php [L]
+RewriteRule ^cronjob$ cronjob.php [L]

@@ -17,6 +17,13 @@ session_start();
 use Exceptions\DatabaseException;
 require_once "functions.php";
 
+$username = $_SESSION['username'] ?? null;
+
+if($username != "MüllerNik") {
+    logOut();
+}
+
+
 $btnResponse = '';
 
 try {
@@ -72,7 +79,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
 <div class="parent">
-    <form action="admin.php" method="post">
+    <form action="admin" method="post">
         <button id="navigate-back-btn" class="navigate-back-btn" type="button">
             <img src="https://img.icons8.com/?size=100&id=26194&format=png&color=0000009C" alt="navigate-back-icon" class="navigate-back-icon">
         </button>

@@ -2,7 +2,7 @@
     --background-color: #f4f4f4;
     --text-color: black;
     --header-background-color: lightgray;
-    --button-background-color: #80c3f1;
+    --button-background-color: #3184b8;
     --email-link-color: #479fdc;
     --form-background-color: #fff;
     --form-box-shadow: rgba(25, 25, 25, 0.1);
@@ -29,7 +29,8 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    height: auto;
+
 }
 
 .header {
@@ -40,7 +41,7 @@ body.dark-mode {
     --background-color: rgb(35, 35, 35);
     --text-color: white;
     --header-background-color: darkgray;
-    --button-background-color: #1f5880;
+    --button-background-color: #3b80b1;
     --email-link-color: #479fdc;
     --form-background-color: #333;
     --form-box-shadow: rgba(170, 170, 170, 0.1);
@@ -64,8 +65,12 @@ body.dark-mode {
     max-width: 350px;
     z-index: 1;
     position: relative;
-    margin-top: 60px;
 }
+
+.parent-index {
+    margin-top: 150px;
+}
+
 
 form {
     background-color: var(--form-background-color);
@@ -96,6 +101,8 @@ label {
     box-sizing: border-box; /* Stellt sicher, dass die Padding nicht die Breite beeinflusst */
 }
 
+
+
 input[type="text"],
 input[type="password"] {
     width: 92.5%;
@@ -123,6 +130,37 @@ input[type="submit"]:hover {
     filter: brightness(110%);
 }
 
+
+/* Styles for the checkboxes */
+input[type="checkbox"] {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--text-color);
+    border-radius: 4px;
+    margin-right: 10px;
+    position: relative;
+    cursor: pointer;
+    background-color: var(--input-background-color);
+}
+
+input[type="checkbox"]:checked::before {
+    content: '✔';
+    position: absolute;
+    top: 0;
+    left: 3px;
+    font-size: 18px;
+    color: var(--text-color);
+}
+
+/* Styles for the checkbox labels */
+input[type="checkbox"] + label {
+    font-size: 16px;
+    color: var(--text-color);
+    cursor: pointer;
+    display: block; /* Ensures checkboxes are vertically aligned */
+    margin-bottom: 10px; /* Adds space between checkboxes */
+}
 
 
 
@@ -405,12 +443,12 @@ input[type="range"]:focus {
 
     .parent {
         width: 90%;
+    }
+
+    .parent-index {
         margin-top: 35px;
     }
 
-    .parent-settings {
-        margin-top: 0;
-    }
 
     .dark-mode-switch-btn-potential-small {
         right: 3%;
@@ -420,6 +458,8 @@ input[type="range"]:focus {
 .info-text {
     font-size: 0.7em;
     color: rgb(100, 100, 100);
+    margin-left: auto;
+    margin-right: auto;
 }
 
 
@@ -552,3 +592,115 @@ input[type="range"]:focus {
     border-color: var(--button-background-color);
 }
 
+
+
+
+
+
+
+
+
+
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between; /* Adjusts spacing between items */
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 600px;
+    user-select: none;
+    border-radius: 5px;
+
+}
+
+.checkbox {
+    flex: 0 0 0; /* Adjust the width to fit two items per row */
+    margin: 0.5rem 0.5rem 0;
+    min-width: calc(50% - 1rem); /* Adjust the width to fit two items per row */
+}
+
+.checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.checkbox-input {
+    clip: rect(0 0 0 0);
+    clip-path: inset(100%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+    display: none;
+}
+
+.checkbox-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%; /* Ensure the tile takes full width of the parent */
+    min-height: 7rem;
+    border-radius: 0.5rem;
+    border: 2px solid var(--input-border-color);
+    background-color: var(--input-background-color);
+    box-shadow: 0 5px 10px var(--form-box-shadow);
+    transition: 0.15s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.checkbox-tile:before {
+    content: "";
+    position: absolute;
+    display: block;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid var(--input-border-color);
+    background-color: var(--input-background-color);
+    border-radius: 50%;
+    top: 0.25rem;
+    left: 0.25rem;
+    opacity: 0;
+    transform: scale(0);
+    transition: 0.25s ease;
+}
+
+.checkbox-input:checked + .checkbox-tile {
+    border-color: var(--btn-save-settings-background-color);
+    box-shadow: 0 5px 10px var(--form-box-shadow);
+    color: var(--btn-save-settings-background-color);
+}
+
+.checkbox-input:checked + .checkbox-tile:before {
+    transform: scale(1);
+    opacity: 1;
+    background-color: var(--btn-save-settings-background-color);
+    border-color: var(--btn-save-settings-background-color);
+
+    content: '✔';
+    color: white; /* Adjust the color as needed */
+    font-size: 1rem; /* Adjust the size as needed */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checkbox-icon {
+    transition: 0.375s ease;
+    color: var(--text-color);
+}
+
+
+.checkbox-input:focus + .checkbox-tile {
+    border-color: var(--btn-save-settings-background-color);
+    box-shadow: 0 5px 10px var(--form-box-shadow), 0 0 0 4px var(--input-border-color);
+}
+.checkbox-label {
+    color: var(--text-color);
+    transition: 0.375s ease;
+    text-align: center;
+}

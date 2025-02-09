@@ -31,7 +31,7 @@ function openExternInfoSite(info) {
             url = "https://github.com/niklas-mlrr/Untis-Notify/wiki/Personalisierbares-Dictionary-(optional)";
             break;
         case "schoolUrl":
-            url = "admin.php";
+            url = "admin";
 
     }
     window.open(url, '_blank');
@@ -92,10 +92,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navigateBackButton) {
         navigateBackButton.addEventListener('click', (event) => {
             event.preventDefault(); // Prevents the default behavior of the button
-            if (window.location.href.includes("impressum.php")) {
-                window.location.href = 'index.php';
-            } else if (window.location.href.includes("admin.php")) {
-                window.location.href = 'settings.php';
+            if (window.location.href.includes("impressum")) {
+                window.location.href = 'login';
+            } else if (window.location.href.includes("admin")) {
+                window.location.href = 'settings';
             }
         });
     }
@@ -115,3 +115,16 @@ function togglePasswordVisibility() {
         toggleIcon.classList.add('fa-eye-slash');
     }
 }
+
+
+
+
+document.querySelectorAll('.checkbox-input').forEach(input => {
+    input.addEventListener('change', function() {
+        if (this.checked) {
+            this.closest('.checkbox-wrapper').classList.add('selected');
+        } else {
+            this.closest('.checkbox-wrapper').classList.remove('selected');
+        }
+    });
+});
