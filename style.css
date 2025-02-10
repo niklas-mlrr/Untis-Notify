@@ -2,7 +2,7 @@
     --background-color: #f4f4f4;
     --text-color: black;
     --header-background-color: lightgray;
-    --button-background-color: #3184b8;
+    --button-background-color: #4da5dd;
     --email-link-color: #479fdc;
     --form-background-color: #fff;
     --form-box-shadow: rgba(25, 25, 25, 0.1);
@@ -11,11 +11,11 @@
     --info-icon-background-color: #dbdbdb;
     --info-field-background-color: #f9f9f9;
     --info-field-border-color: #ccc;
-    --btn-testbenachrichtigung-background-color: #868e8a;
-    --btn-save-settings-background-color: #45a049;
+    --btn-testbenachrichtigung-background-color: #f68348;
+    --btn-save-settings-background-color: #63b567;
     --btn-log-out-background-color: #b1b5b3;
-    --btn-delete-acc-background-color: #ff642b;
-    --btn-admin-panel-background-color: #ff7833;
+    --btn-delete-acc-background-color: #f36246;
+    --btn-admin-panel-background-color: #f68348;
     --slider-thumb-color: #4e4e4e;
     --calendar-icon-filter: invert(0);
 }
@@ -50,11 +50,11 @@ body.dark-mode {
     --info-icon-background-color: #555;
     --info-field-background-color: #444;
     --info-field-border-color: #555;
-    --btn-testbenachrichtigung-background-color: #606060;
+    --btn-testbenachrichtigung-background-color: #cd6e3d;
     --btn-save-settings-background-color: #357a38;
     --btn-log-out-background-color: #444;
     --btn-delete-acc-background-color: #a22b1a;
-    --btn-admin-panel-background-color: #ff7833;
+    --btn-admin-panel-background-color: #cd6e3d;
     --slider-thumb-color: #dadada;
     --calendar-icon-filter: invert(1);
 }
