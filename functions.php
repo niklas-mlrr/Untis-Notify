@@ -529,13 +529,10 @@ function chooseNotCanceledLesson(array $lesson1, array $lesson2): ?array {
 
 
     if (!$canceled1) {
-        // Only lesson1 does not have "code" set
         return $lesson1;
     } elseif (!$canceled2) {
-        // Only lesson2 does not have "code" set
         return $lesson2;
     } else {
-        // Both lessons have "code" set
         return $lesson1;
     }
 }
@@ -571,7 +568,6 @@ function findMissingItems($array1, $array2): array {
     $differences = [];
     foreach ($array1 as $key => $item) {
         if (!isset($array2[$key])) {
-            // Ausfall
             $differences[] = createDifference("sonstiges", "{$item['lessonNum']}. Stunde {$item['subject']} fehlt jetzt komplett", " ");
         }
     }
@@ -585,7 +581,6 @@ function findCanceledItems($array1, $array2): array {
         if (isset($array2[$key])) {
             foreach ($item as $subKey => $value) {
                 if ($subKey == "canceled" && $array2[$key][$subKey] == 1 && $value != 1) {
-                    // Ausfall
                     $differences[] = createDifference("ausfall", "{$item['lessonNum']}. Stunde {$item['subject']}", " ");
                     $canceledLessons[] = $item['lessonNum'];
                     break;
@@ -602,7 +597,6 @@ function findChangedItems($array1, $array2, $canceledLessons, &$fachwechselLesso
         if (isset($array2[$key]) && !in_array($item['lessonNum'], $canceledLessons) && !in_array($item['lessonNum'], $fachwechselLessons)) {
             foreach ($item as $subKey => $value) {
                 if ($value != "notSet" && !isset($value)) {
-                    // Sonstiges
                     $differences[] = createDifference("sonstiges", "Eigenschaft \"$subKey\" fehlt in der {$item['lessonNum']}. Stunde", " ");
                 } elseif ($array2[$key][$subKey] !== $value) {
                     if(!in_array($item['lessonNum'], $fachwechselLessons)) {
@@ -618,7 +612,6 @@ function findNewItems($array1, $array2): array {
     $differences = [];
     foreach ($array2 as $key => $item) {
         if (!isset($array1[$key])) {
-            // Sonstiges
             $differences[] = createDifference("sonstiges", "{$item['lessonNum']}. Stunde {$item['subject']}", "Neues Fach bei {$item['teacher']} in Raum {$item['room']}");
         }
     }
@@ -638,13 +631,9 @@ function handleDifference($subKey, $value, $newValue, $item, &$fachwechselLesson
     }
 
     return match ($subKey) {
-        // Ausfall
-        "canceled" => $value == 1 ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Jetzt kein Ausfall mehr") : createDifference("ausfall", "$lessonNum. Stunde $subject", " "),
-        // Vertretung
+        "canceled" => $value == 1 ? createDifference("ausfall", "$lessonNum. Stunde $subject", "Jetzt kein Ausfall mehr") : createDifference("ausfall", "$lessonNum. Stunde $subject", " "),
         "teacher" => $newValue == "---" ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Lehrer ausgetragen (Vorher: $value)") : createDifference("vertretung", "$lessonNum. Stunde $subject", "Vorher: $value; Jetzt: $newValue"),
-        // Raumänderung
         "room" => $newValue == "---" ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Raum ausgetragen (Vorher: $value)") : createDifference("raumänderung", "$lessonNum. Stunde $subject", "Vorher: $value; Jetzt: $newValue"),
-        // Sonstiges
         "subject" => $newValue == "---" ? createDifference("sonstiges", "$lessonNum. Stunde $subject", "Fach ausgetragen (Vorher: $value)") : createDifference("sonstiges", "$lessonNum. Stunde", "Fachwechsel; Vorher: $value; Jetzt: $newValue; (Es könnte sein, dass sich auch Lehrer oder Raum geändert haben)"),
         default => null,
     };
@@ -681,13 +670,24 @@ function sendSlackMessages($differences, $username, $conn): void {
     if (empty($differences)) {
         return;
     }
+    try {
+        $receiveNotificationsFor = trim(getValueFromDatabase($conn, "users", "receive_notifications_for", ["username" => $username], $username));
+        $receiveNotificationsFor = explode(", ", $receiveNotificationsFor);
+
+        $differences = array_filter($differences, function ($difference) use ($receiveNotificationsFor) {
+            return in_array($difference['channel'], $receiveNotificationsFor);
+        });
+    } catch (DatabaseException) {
+        return;
+    }
+
+
     $differencesCount = count($differences);
 
     if ($differencesCount >= 20) {
         $differences = json_encode($differences);
         ErrorLogger::log("Zu viele Benachrichtigungen ($differencesCount): $differences", $username);
         $differences = [];
-        // Immer
         $differences[] = createDifference("sonstiges", "Zu viele Benachrichtigungen", "Das System wollte gerade " . $differencesCount . " Benachrichtigungen zu dir senden. Durch einen Sicherheitsmechanismus wurden diese abgefangen. Bitte wende dich an den Admin um zu erfahren, warum dir so viele Benachrichtigungen gesendet werden sollten");
         $differences[0]['date'] = date("Ymd"); // Add date for this special case
     }
@@ -734,9 +734,10 @@ function getMessageText($case): string {
 
 
 /**
+ * @param string $accountDeleted
  * @return void
  */
-function logOut($accountDeleted = ""): void {
+function logOut(string $accountDeleted = ""): void {
     setcookie(session_name(), '', 100);
     session_unset();
     session_destroy();
@@ -746,7 +747,6 @@ function logOut($accountDeleted = ""): void {
 
 
 /**
- * Stellt eine Verbindung zur Datenbank her
  * @return mysqli
  * @throws DatabaseException
  */

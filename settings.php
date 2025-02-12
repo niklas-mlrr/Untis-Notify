@@ -260,7 +260,7 @@ try {
                 </span>
             </label>
         </div>
-        <p class="info-text">*Hierzu zählen Dinge wie Fachwechsel und kleinere Änderungen</p>
+        <p class="info-text">*Hierzu zählen Dinge wie Fachwechsel, Raumaustragungen und Lehreraustragungen <br> (= oft eine Vorstufe von Ausfall / Vertretung)</p>
     </fieldset>
     <br><br>
 
