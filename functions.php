@@ -709,11 +709,11 @@ function sendSlackMessages($differences, $username, $conn): void {
 function getMessageText($case): string {
     return match ($case) {
         "loginFailed" => '<p class="failed">Fehler beim Einloggen</p>',
-        "settingsSavedSuccessfully" => '<p class="successful">Einstellungen erfolgreich gespeichert</p>',
+        "settingsSavedSuccessfully" => '<p class="successful">Einstellungen erfolgreich gespeichert.</p>',
         "settingsNotSaved" => '<p class="failed">Fehler beim Speichern der Einstellungen</p>',
         "accountDeletedSuccessfully" => '<p class="successful">Konto erfolgreich gelöscht</p>',
         "accountNotDeleted" => '<p class="failed">Fehler beim Löschen des Kontos</p>',
-        "testNotificationAllSent" => '<p class="successful">Alle 4 Testbenachrichtigungen erfolgreich gesendet</p>',
+        "testNotificationAllSent" => '<p class="successful">Alle 4 Testbenachrichtigungen erfolgreich gesendet. <br> Somit ist das Setup erfolgreich abgeschlossen und die regelmäßige Überprüfung auf Änderungen nun für dich aktiviert.</p>',
         "testNotificationAllNotSent" => '<p class="failed">Fehler beim Senden aller Testbenachrichtigungen</p>',
         "testNotificationAusfallNotSent" => '<p class="failed">Fehler beim Senden der Testbenachrichtigung für den Channel ausfall</p>',
         "testNotificationRaumänderungNotSent" => '<p class="failed">Fehler beim Senden der Testbenachrichtigung für den Channel raumänderung</p>',
@@ -726,6 +726,8 @@ function getMessageText($case): string {
         "messageNotSent" => '<p class="failed">Fehler beim Senden der Nachricht</p>',
         "notificationOrDictionaryError" => '<p class="failed">Einstellungen nicht gespeichert. Entweder hast du nicht mindestens eine Benachrichtigungsart ausgewählt oder das Dictionary nicht im korrekten Format angegeben</p>',
         "receiveNotificationsForError" => '<p class="failed">Fehler beim Setzen der Benachrichtigungsarten</p>',
+        "howToContinue" => '<p class="successful">Um zu testen, ob du alles richtig gemacht hast, klicke auf "Testbenachrichtigungen senden".</p>',
+        "noSlackBotToken" => '<p class="failed">Zuerst musst du oben den Slack Bot Token angeben und speichern. <br> Klicke auf das "?", um zu erfahren, wie du diesen erhalten kannst.</p>',
         default => "",
     };
 }
@@ -734,12 +736,12 @@ function getMessageText($case): string {
 /**
  * @return void
  */
-function logOut(): void {
+function logOut($accountDeleted = ""): void {
     setcookie(session_name(), '', 100);
     session_unset();
     session_destroy();
     $_SESSION = array();
-    header("Location: login");
+    header("Location: login" . $accountDeleted);
 }
 
 

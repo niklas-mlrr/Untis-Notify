@@ -3,9 +3,19 @@
 <head>
     <title>Impressum</title>
     <meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="apple-touch-icon" href="logo.svg">
-    <link rel="icon" href="logo.svg" type="image/svg+xml">
-    <link rel="shortcut icon" href="logo.svg" type="image/x-icon">
+
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="Favicon/apple-touch-icon-57x57.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="Favicon/apple-touch-icon-72x72.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="Favicon/apple-touch-icon-144x144.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="120x120" href="Favicon/apple-touch-icon-120x120.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="Favicon/apple-touch-icon-152x152.png" />
+    <link rel="icon" type="image/png" href="Favicon/favicon-196x196.png" sizes="196x196" />
+    <link rel="icon" type="image/png" href="Favicon/favicon-32x32.png" sizes="32x32" />
+    <link rel="icon" type="image/png" href="Favicon/favicon-16x16.png" sizes="16x16" />
+    <meta name="application-name" content="Untis Notify"/>
+    <meta name="msapplication-TileColor" content="#" />
+    <meta name="msapplication-TileImage" content="Favicon/mstile-144x144.png" />
+
     <link rel="stylesheet" href="style.css">
 </head>
 
