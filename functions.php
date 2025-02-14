@@ -409,7 +409,22 @@ $startTimes = [
 
 
 function cmp($a, $b) {
-    return $a['lessonNum'] - $b['lessonNum'];
+    try {
+        if (!isset($a['lessonNum']) || !isset($b['lessonNum']) || !is_int($a['lessonNum']) || !is_int($b['lessonNum'])) {
+            throw new Exception();
+        }
+        return $a['lessonNum'] - $b['lessonNum'];
+    } catch (Exception) {
+        try {
+            ErrorLogger::log("Error in cmp function");
+            $conn = connectToDatabase();
+            sendSlackMessage("MüllerNik", "sonstiges", "Error in cmp function", "Stundenplanzeiten der Schule haben sich wahrscheinlich geändert", date("Ymd"), $conn);
+            exit();
+        } catch (DatabaseException|Exception) {
+            return 0;
+        }
+
+    }
 }
 
 
