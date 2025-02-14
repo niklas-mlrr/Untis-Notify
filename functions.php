@@ -27,9 +27,7 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
     $differences = [];
 
     try {
-        $schoolUrl = getValueFromDatabase($conn, "users", "school_url", ["username" => $username], $username);
-        $login = loginToWebUntis($username, $password, $schoolUrl);
-
+        $login = loginToWebUntis($username, $password);
         $students = getStudents($login, $username);
         $userId = getStudentIdByName($students, $username);
         $notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username], $username);
@@ -245,11 +243,10 @@ function logNotificationToFile($dateSent, $forDate, string $username, string $ch
  *
  * @param string $username The username to log in with
  * @param string $password The password to log in with
- * @param string $schoolUrl The URL of the school
  * @return string The session ID
  * @throws AuthenticationException
  */
-function loginToWebUntis(string $username, string $password, string $schoolUrl): string {
+function loginToWebUntis(string $username, string $password): string {
     $loginPayload = [
         "id" => "login",
         "method" => "authenticate",
@@ -260,7 +257,7 @@ function loginToWebUntis(string $username, string $password, string $schoolUrl):
         "jsonrpc" => "2.0"
     ];
 
-    $ch = curl_init($schoolUrl);
+    $ch = curl_init("https://niobe.webuntis.com/WebUntis/jsonrpc.do?school=gym-osterode");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($loginPayload));

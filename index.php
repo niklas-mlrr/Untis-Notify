@@ -30,17 +30,14 @@ use Exceptions\AuthenticationException;
 
 $username = $_POST['username'] ?? null;
 $password = $_POST['password'] ?? null;
-$schoolUrl = $_POST['schoolUrl'] ?? null;
 
 
-
-if ($username && $password && $schoolUrl) {
+if ($username && $password) {
     $username = trim($username);
     $password = trim($password);
-    $schoolUrl = trim($schoolUrl);
 
     try {
-        $sessionId = loginToWebUntis($username, $password, $schoolUrl);
+        $sessionId = loginToWebUntis($username, $password);
         $conn = connectToDatabase();
 
 
@@ -48,7 +45,7 @@ if ($username && $password && $schoolUrl) {
         if (!$isUserInDatabaseAndAuthenticated) {
             $passwordCipherAndHash = encryptAndHashPassword($password);
             if (empty(getRowsFromDatabase($conn, "users", ["username" => $username], $username))) {
-                insertIntoDatabase($conn, "users", ["username", "password_cipher", "password_hash", "school_url"], [$username, $passwordCipherAndHash[0], $passwordCipherAndHash[1], $schoolUrl], $username);
+                insertIntoDatabase($conn, "users", ["username", "password_cipher", "password_hash"], [$username, $passwordCipherAndHash[0], $passwordCipherAndHash[1]], $username);
             } else {
                 updateDatabase($conn, "users", ["password_cipher", "password_hash"], ["username = ?"], [$passwordCipherAndHash[0], $passwordCipherAndHash[1], $username], $username);
             }
@@ -58,7 +55,6 @@ if ($username && $password && $schoolUrl) {
         $_SESSION['username'] = $username;
         $_SESSION['password'] = $password;
         $_SESSION['conn'] = $conn;
-        $_SESSION['schoolUrl'] = $schoolUrl;
 
         $currentTimestamp = date('Y-m-d h:i:s', time());
         updateDatabase($conn, "users", ["last_login"], ["username = ?"], [$currentTimestamp, $username], $username);
@@ -96,16 +92,6 @@ if ($username && $password && $schoolUrl) {
         <h2>Untis Notify</h2>
         <h4>- Benachrichtigungen für Untis -</h4>
         <p class="info-text">Die Einrichtung dauert einmalig ca. 15 Min. und benötigt ein Handy & Pc / Laptop</p>
-        <br>
-
-        <label for="schoolUrl">Schul-URL:</label>
-        <div class="label-container">
-            <input type="text" id="schoolUrl" name="schoolUrl" placeholder="https://niobe.webuntis.com/WebUntis/jsonrpc.do?school=gym-osterode">
-            <span class="info-icon" onclick="toggleInfo('info-schoolUrl')" onKeyDown="toggleInfo('info-schoolUrl')">?</span>
-        </div>
-        <div class="info-field" id="info-schoolUrl">
-            <p>Dies ist eine schulspezifische URL. <br> Wenn du auf dem TRG bist, musst du hier nichts eintragen bzw. das Feld muss leer gelassen werden.</p>
-        </div>
         <br>
 
         <label for="username">Untis Benutzername:</label>

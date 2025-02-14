@@ -30,21 +30,10 @@ function openExternInfoSite(info) {
         case "dictionary":
             url = "https://github.com/niklas-mlrr/Untis-Notify/wiki/Personalisierbares-Dictionary-(optional)";
             break;
-        case "schoolUrl":
-            url = "admin";
 
     }
     window.open(url, '_blank');
 }
-
-document.querySelector('form').addEventListener('submit', function() {
-    let schoolUrlInput = document.getElementById('schoolUrl');
-    if (schoolUrlInput.value.trim() === '') {
-        schoolUrlInput.value = schoolUrlInput.placeholder;
-    }
-});
-
-
 
 
 

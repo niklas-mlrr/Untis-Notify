@@ -2,13 +2,14 @@
     --background-color: #f4f4f4;
     --text-color: black;
     --header-background-color: lightgray;
-    --button-background-color: #4da5dd;
+    --button-background-color: #66bdf8;
     --email-link-color: #479fdc;
     --form-background-color: #fff;
     --form-box-shadow: rgba(25, 25, 25, 0.1);
     --input-border-color: #ccc;
     --input-background-color: white;
-    --info-icon-background-color: #dbdbdb;
+    --info-icon-background-color: #ededed;
+    --info-icon-text-color: #cf371b;
     --info-field-background-color: #f9f9f9;
     --info-field-border-color: #ccc;
     --btn-testbenachrichtigung-background-color: #f68348;
@@ -46,8 +47,9 @@ body.dark-mode {
     --form-background-color: #333;
     --form-box-shadow: rgba(170, 170, 170, 0.1);
     --input-border-color: #555;
-    --input-background-color: #444;
-    --info-icon-background-color: #555;
+    --input-background-color: #505050;
+    --info-icon-background-color: #505050;
+    --info-icon-text-color: #d87951;
     --info-field-background-color: #444;
     --info-field-border-color: #555;
     --btn-testbenachrichtigung-background-color: #cd6e3d;
@@ -79,7 +81,6 @@ form {
     margin-bottom: 20px;
     border-radius: 5px;
     box-shadow: 0 0 10px var(--form-box-shadow);
-    max-width: 85%;
     z-index: 5;
 }
 
@@ -350,14 +351,16 @@ input[type="range"]:focus {
     width: 25px;
     height: 25px;
     background-color: var(--info-icon-background-color);
-    color: var(--text-color);
+    color: var(--info-icon-text-color);
     text-align: center;
     border-radius: 50%;
     cursor: pointer;
     margin-top: 1px;
     margin-left: 10px;
-    margin-bottom: 11px;
+    margin-bottom: 10px;
     padding-top: 6px;
+    border: var(--info-icon-text-color) 1px solid;
+    font-weight: bold;
 }
 
 .info-icon:hover {
