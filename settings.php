@@ -187,6 +187,9 @@ try {
 
 <div class="parent">
 
+    <video id="loading-animation" class="loader" autoplay loop muted playsinline>
+        <source src="loader.webm" type="video/webm">
+    </video>
 
     <form action="settings" method="post">
 
