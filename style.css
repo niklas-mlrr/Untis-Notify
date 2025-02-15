@@ -414,14 +414,12 @@ input[type="range"]:focus {
 
     position: absolute;
     top: 25px;
-    right: 3%;
+    right: 0;
     cursor: pointer;
     z-index: 100;
 }
 
-.dark-mode-switch-btn-potential-small {
-    right: 0.5%;
-}
+
 
 .dark-mode-switch-icon {
     width: 40px;
@@ -452,10 +450,6 @@ input[type="range"]:focus {
         margin-top: 35px;
     }
 
-
-    .dark-mode-switch-btn-potential-small {
-        right: 3%;
-    }
 }
 
 .info-text {

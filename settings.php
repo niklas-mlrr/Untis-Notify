@@ -289,7 +289,7 @@ try {
 
         <?php
         if ($username === "MüllerNik") {
-            echo '<br><button class="admin-panel-btn btn" name="action" value="adminPanel">Admin Panel</button>';
+            echo '<br><button class="admin-panel-btn btn" type="submit" name="action" value="adminPanel">Admin Panel</button>';
 
         }
         ?>
