@@ -88,9 +88,9 @@ if ($username && $password) {
 
 <div class="parent parent-index">
     <video id="loading-animation" class="loader" autoplay loop muted playsinline>
-        <source src="loader.gif" type="video/gif">
-        <track kind="subtitles" src="" srclang="en" label="English">
-        <track kind="descriptions" src="" srclang="en" label="English">
+        <source src="loader-webm.webm" type="video/webm">
+        <track kind="subtitles" src="">
+        <track kind="descriptions" src="">
     </video>
 
     <form action="login" method="post">
