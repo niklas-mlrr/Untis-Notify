@@ -188,8 +188,6 @@ try {
 <div class="parent">
 
 
-
-    <video id="loading-animation" class="loader" src="loader.webm" alt="Loading..." autoplay loop muted playsinline></video>
     <form action="settings" method="post">
 
         <button id="toggle-theme" class="dark-mode-switch-btn" type="button">

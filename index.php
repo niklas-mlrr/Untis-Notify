@@ -93,6 +93,12 @@ if ($username && $password) {
         <track kind="descriptions" src="">
     </video>
 
+    <video width="600" height="100%" autoplay loop muted playsinline>
+        <source src="https://rotato.netlify.app/alpha-demo/movie-hevc.mov" type='video/mp4; codecs="hvc1"'>
+        <source src="https://rotato.netlify.app/alpha-demo/movie-webm.webm" type="video/webm">
+    </video>
+
+
     <form action="login" method="post">
         <button id="toggle-theme" class="dark-mode-switch-btn" type="button">
             <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
