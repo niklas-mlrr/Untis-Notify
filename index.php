@@ -88,7 +88,7 @@ if ($username && $password) {
 
 <div class="parent parent-index">
     <video id="loading-animation" class="loader" width="600" height="100%" autoplay loop muted playsinline>
-        <source src="loader.webm" type="video/webm">
+        <source src="https://rotato.netlify.app/alpha-demo/movie-webm.webm" type="video/webm">
     </video>
 
 
