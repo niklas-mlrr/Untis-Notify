@@ -87,16 +87,11 @@ if ($username && $password) {
 <p class="notification-text">↑ Beispiel einer Benachrichtigung ↑</p>
 
 <div class="parent parent-index">
-    <video id="loading-animation" class="loader" autoplay loop muted>
-        <source src="loader.webm" type="video/webm">
-        <track kind="subtitles" src="">
-        <track kind="descriptions" src="">
-    </video>
-
-    <video width="600" height="100%" autoplay loop muted playsinline>
+    <video id="loading-animation" class="loader" autoplay loop muted playsinline>
         <source src="https://rotato.netlify.app/alpha-demo/movie-hevc.mov" type='video/mp4; codecs="hvc1"'>
         <source src="https://rotato.netlify.app/alpha-demo/movie-webm.webm" type="video/webm">
     </video>
+
 
 
     <form action="login" method="post">
