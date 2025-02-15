@@ -189,8 +189,9 @@ try {
 
     <video id="loading-animation" class="loader" autoplay loop muted playsinline>
         <source src="loader.webm" type="video/webm">
-        <source src="loader.mov" type='video/quicktime; codecs="hvc1"'>
+        <source src="loader.mov" type='video/mp4; codecs="hvc1"'>
     </video>
+
 
     <form action="settings" method="post">
 
