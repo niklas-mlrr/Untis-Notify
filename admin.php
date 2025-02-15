@@ -89,7 +89,9 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
 <div class="parent">
-    <img id="loading-animation" class="loader" src="loader.gif" alt="Loading...">
+
+    <span class="loader" id="loading-animation" ></span>
+
     <form action="admin" method="post">
 
         <button id="navigate-back-btn" class="navigate-back-btn" type="button" onclick="showLoadingAnimation()">

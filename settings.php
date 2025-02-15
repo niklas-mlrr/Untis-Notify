@@ -185,13 +185,11 @@ try {
 
 ?>
 
+
+
+
 <div class="parent">
-
-    <video id="loading-animation" class="loader" autoplay loop muted playsinline>
-        <source src="loader.webm" type="video/webm">
-        <source src="loader.mov" type='video/mp4; codecs="hvc1"'>
-    </video>
-
+    <span class="loader" id="loading-animation" ></span>
 
     <form action="settings" method="post">
 

@@ -87,12 +87,8 @@ if ($username && $password) {
 <p class="notification-text">↑ Beispiel einer Benachrichtigung ↑</p>
 
 <div class="parent parent-index">
-    <video id="loading-animation" class="loader" autoplay loop muted playsinline>
-        <source src="loader.webm" type="video/webm">
-        <source src="loader.mov" type='video/quicktime; codecs="hvc1"'>
-    </video>
 
-
+    <span class="loader" id="loading-animation" ></span>
 
     <form action="login" method="post">
         <button id="toggle-theme" class="dark-mode-switch-btn" type="button">

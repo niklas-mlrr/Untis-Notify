@@ -61,6 +61,7 @@ body.dark-mode {
     --calendar-icon-filter: invert(1);
 }
 
+
 .parent {
     display: block;
     text-align: center;
@@ -707,18 +708,30 @@ input[type="range"]:focus {
     pointer-events: none;
 }
 
+
 .loader {
     z-index: 5;
-    width: 65%;
-    max-width: 350px;
+    width: 65px;
+    height: 65px;
     position: fixed;
     top: 50%;
-    left: 50%;
+    left: calc(50% - 32.5px);
     transform: translate(-50%, -50%);
     text-align: center;
 
+    border-radius: 50%;
+    border-top: 4px solid var(--text-color);
+    border-right: 4px solid transparent;
+    animation: rotation 1s linear infinite;
+
 }
 
-.loader-white {
 
+@keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }
