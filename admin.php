@@ -89,8 +89,10 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
 <div class="parent">
+    <img id="loading-animation" class="loader" src="loader.gif" alt="Loading...">
     <form action="admin" method="post">
-        <button id="navigate-back-btn" class="navigate-back-btn" type="button">
+
+        <button id="navigate-back-btn" class="navigate-back-btn" type="button" onclick="showLoadingAnimation()">
             <img src="https://img.icons8.com/?size=100&id=26194&format=png&color=0000009C" alt="navigate-back-icon" class="navigate-back-icon">
         </button>
 
@@ -152,7 +154,6 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php echo $btnResponse; ?>
     </form>
 </div>
-
 </body>
 <script src="script.js"></script>
 </html>

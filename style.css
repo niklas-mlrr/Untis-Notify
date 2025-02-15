@@ -701,3 +701,24 @@ input[type="range"]:focus {
     transition: 0.375s ease;
     text-align: center;
 }
+
+.overlay {
+    filter: blur(3px);
+    pointer-events: none;
+}
+
+.loader {
+    z-index: 5;
+    width: 65%;
+    max-width: 350px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    filter: invert(0.8);
+}
+
+.loader-white {
+    filter: brightness(2);
+}

@@ -78,6 +78,7 @@ if ($username && $password) {
 }
 ?>
 
+
 <div class="img-div">
     <img class="notification-img" src="notification example.png" alt="Notification Example">
 </div>
@@ -85,6 +86,7 @@ if ($username && $password) {
 <p class="notification-text">↑ Beispiel einer Benachrichtigung ↑</p>
 
 <div class="parent parent-index">
+    <img id="loading-animation" class="loader" src="loader.gif" alt="Loading...">
     <form action="login" method="post">
         <button id="toggle-theme" class="dark-mode-switch-btn" type="button">
             <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
@@ -111,7 +113,7 @@ if ($username && $password) {
         </div>
         <br>
 
-        <input type="submit" value="Einloggen">
+        <input type="submit" value="Einloggen" onclick="showLoadingAnimation()">
         <br><br>
         <?php echo $loginMessage; ?>
 

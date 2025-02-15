@@ -1,7 +1,4 @@
-function toggleInfo(id) {
-    let infoField = document.getElementById(id);
-    infoField.style.display = (infoField.style.display === "block") ? "none" : "block";
-}
+hideLoadingAnimation();
 
 document.addEventListener('click', function(event) {
     let infoFields = document.querySelectorAll('.info-field');
@@ -41,16 +38,15 @@ function openExternInfoSite(info) {
 document.addEventListener('DOMContentLoaded', () => {
     const toggleButton = document.getElementById('toggle-theme');
     const toggleIcon = document.querySelector('.dark-mode-switch-icon');
+    const loader = document.querySelector('.loader');
     const navigateBackButton = document.querySelector('.navigate-back-icon');
 
-    if (!toggleButton) {
-        console.error('toggleButton not found in the DOM');
+    if (!toggleButton || !toggleIcon || !loader) {
+        console.error('Element(s) not found in the DOM');
         return;
     }
-    if (!toggleIcon) {
-        console.error('toggleIcon not found in the DOM');
-        return;
-    }
+
+
 
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const savedTheme = localStorage.getItem('theme');
@@ -59,12 +55,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (currentTheme === 'dark') {
         document.body.classList.add('dark-mode');
         toggleIcon.classList.add('dark-mode-switch-icon-white');
+        loader.classList.add('loader-white');
         if (navigateBackButton) {
             navigateBackButton.classList.add('navigate-back-icon-white');
         }
     } else {
         document.body.classList.remove('dark-mode');
         toggleIcon.classList.remove('dark-mode-switch-icon-white');
+        loader.classList.remove('loader-white');
         if (navigateBackButton) {
             navigateBackButton.classList.remove('navigate-back-icon-white');
         }
@@ -76,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const theme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
         localStorage.setItem('theme', theme);
         toggleIcon.classList.toggle('dark-mode-switch-icon-white');
+        loader.classList.toggle('loader-white');
         if (navigateBackButton) {
             navigateBackButton.classList.toggle('navigate-back-icon-white');
         }
@@ -120,3 +119,18 @@ document.querySelectorAll('.checkbox-input').forEach(input => {
         }
     });
 });
+
+
+function showLoadingAnimation() {
+    document.querySelectorAll('form').forEach(form => {
+        form.classList.add('overlay');
+    });
+    document.getElementById('loading-animation').style.display = 'block';
+}
+
+function hideLoadingAnimation() {
+    document.querySelectorAll('form').forEach(form => {
+        form.classList.remove('overlay');
+    });
+    document.getElementById('loading-animation').style.display = 'none';
+}

@@ -20,6 +20,7 @@
 </head>
 <body>
 
+
 <?php
 
 use Exceptions\DatabaseException;
@@ -185,7 +186,12 @@ try {
 ?>
 
 <div class="parent">
+
+
+
+    <img id="loading-animation" class="loader" src="loader.gif" alt="Loading...">
     <form action="settings" method="post">
+
         <button id="toggle-theme" class="dark-mode-switch-btn" type="button">
             <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
         </button>
@@ -276,20 +282,20 @@ try {
                   onKeyDown="openExternInfoSite('TageInVoraus')">?</span>
         </div>
         <br><br>
-        <button class="btn-save-settings btn" type="submit">Einstellungen speichern</button>
+        <button class="btn-save-settings btn" type="submit" onclick="showLoadingAnimation()">Einstellungen speichern</button>
         <br><br>
         <?php echo $btnResponse; ?>
     </form>
     <form action="settings" method="post">
-        <button class="btn-testbenachrichtigung btn" type="submit" name="action" value="testNotification">Testbenachrichtigungen senden</button><br>
+        <button class="btn-testbenachrichtigung btn" type="submit" name="action" value="testNotification" onclick="showLoadingAnimation()">Testbenachrichtigungen senden</button><br>
         <nobr>
-            <button class="btn-log-out btn" type="submit" name="action" value="logout">Abmelden</button>
-            <button class="btn-delete-acc btn" type="submit" name="action" value="deleteAccount">Konto löschen</button>
+            <button class="btn-log-out btn" type="submit" name="action" value="logout" onclick="showLoadingAnimation()">Abmelden</button>
+            <button class="btn-delete-acc btn" type="submit" name="action" value="deleteAccount" onclick="showLoadingAnimation()">Konto löschen</button>
         </nobr>
 
         <?php
         if ($username === "MüllerNik") {
-            echo '<br><button class="admin-panel-btn btn" type="submit" name="action" value="adminPanel">Admin Panel</button>';
+            echo '<br><button class="admin-panel-btn btn" type="submit" name="action" value="adminPanel" onclick="showLoadingAnimation()">Admin Panel</button>';
 
         }
         ?>
