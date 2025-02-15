@@ -189,7 +189,7 @@ try {
 
 
 
-    <img id="loading-animation" class="loader" src="loader.gif" alt="Loading...">
+    <img id="loading-animation" class="loader" src="loader.webm" alt="Loading...">
     <form action="settings" method="post">
 
         <button id="toggle-theme" class="dark-mode-switch-btn" type="button">
