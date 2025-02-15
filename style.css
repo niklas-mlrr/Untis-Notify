@@ -716,9 +716,9 @@ input[type="range"]:focus {
     left: 50%;
     transform: translate(-50%, -50%);
     text-align: center;
-    filter: invert(0.8);
+
 }
 
 .loader-white {
-    filter: brightness(2);
+
 }
