@@ -1,5 +1,16 @@
 hideLoadingAnimation();
 
+
+const scrollToBottom = () => {
+    document.getElementById('parent').scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+if(window.location.href.includes("settingsSavedSuccessfully") || window.location.href.includes("testnotificationsSentSuccessfully")) {
+    scrollToBottom();
+}
+
+
+
 document.addEventListener('click', function(event) {
     let infoFields = document.querySelectorAll('.info-field');
     infoFields.forEach(function(infoField) {
@@ -134,3 +145,4 @@ function hideLoadingAnimation() {
     });
     document.getElementById('loading-animation').style.display = 'none';
 }
+

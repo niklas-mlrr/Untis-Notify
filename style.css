@@ -711,11 +711,11 @@ input[type="range"]:focus {
 
 .loader {
     z-index: 5;
-    width: 65px;
-    height: 65px;
+    width: 60px;
+    height: 60px;
     position: fixed;
     top: 50%;
-    left: calc(50% - 32.5px);
+    left: calc(50% - 30px);
     transform: translate(-50%, -50%);
     text-align: center;
 
@@ -723,7 +723,6 @@ input[type="range"]:focus {
     border-top: 4px solid var(--text-color);
     border-right: 4px solid transparent;
     animation: rotation 1s linear infinite;
-
 }
 
 

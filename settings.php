@@ -38,6 +38,9 @@ if (!$username || !$password) {
     logOut();
 }
 
+// how to automatically scroll down
+// https://stackoverflow.com/questions/270612/scroll-to-bottom-of-div
+
 
 $conn = null;
 $slackBotToken = "";
@@ -104,6 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action'])) {
     }
 
     $conn->close();
+    //header("Location: settings?testnotificationsSentSuccessfully");
 }
 
 
@@ -155,6 +159,7 @@ if (isset($_POST['action'])) {
                     } elseif (!$testNotificationSonstiges) {
                         $btnResponse = getMessageText("testNotificationSonstigesNotSent");
                     }
+                    //header("Location: settings?testnotificationsSentSuccessfully");
                     break;
                 } catch (Exception $e) {
                     $btnResponse = getMessageText("testNotificationAllNotSent");
@@ -188,7 +193,7 @@ try {
 
 
 
-<div class="parent">
+<div class="parent" id="parent">
     <span class="loader" id="loading-animation" ></span>
 
     <form action="settings" method="post">
@@ -212,9 +217,6 @@ try {
             <span class="info-icon" onclick="openExternInfoSite('dictionary')" onKeyDown="openExternInfoSite('dictionary')">?</span>
         </div>
         <br><br>
-
-
-
 
 
 
