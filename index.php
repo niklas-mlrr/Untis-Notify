@@ -87,8 +87,7 @@ if ($username && $password) {
 <p class="notification-text">↑ Beispiel einer Benachrichtigung ↑</p>
 
 <div class="parent parent-index">
-    <video id="loading-animation" class="loader" autoplay loop muted playsinline>
-        <source src="loader-mov.mov" type='video/mp4; codecs="hvc1"'>
+    <video id="loading-animation" class="loader" width="600" height="100%" autoplay loop muted playsinline>
         <source src="loader.webm" type="video/webm">
     </video>
 
