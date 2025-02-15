@@ -87,7 +87,12 @@ if ($username && $password) {
 <p class="notification-text">↑ Beispiel einer Benachrichtigung ↑</p>
 
 <div class="parent parent-index">
-    <video id="loading-animation" class="loader" src="loader.gif" alt="Loading...">
+    <video id="loading-animation" class="loader" autoplay loop muted playsinline>
+        <source src="loader.gif" type="video/gif">
+        <track kind="subtitles" src="" srclang="en" label="English">
+        <track kind="descriptions" src="" srclang="en" label="English">
+    </video>
+
     <form action="login" method="post">
         <button id="toggle-theme" class="dark-mode-switch-btn" type="button">
             <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
