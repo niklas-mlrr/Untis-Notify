@@ -722,6 +722,7 @@ function getMessageText($case): string {
     return match ($case) {
         "loginFailed" => '<p class="failed">Fehler beim Einloggen</p>',
         "settingsSavedSuccessfully" => '<p class="successful">Einstellungen erfolgreich gespeichert.</p>',
+        "settingsSavedSuccessfullyAndHowToContinue" => '<p class="successful">Einstellungen erfolgreich gespeichert. <br> Um zu testen, ob du alles richtig gemacht hast, klicke auf "Testbenachrichtigungen senden".</p>',
         "settingsNotSaved" => '<p class="failed">Fehler beim Speichern der Einstellungen</p>',
         "accountDeletedSuccessfully" => '<p class="successful">Konto erfolgreich gelöscht</p>',
         "accountNotDeleted" => '<p class="failed">Fehler beim Löschen des Kontos</p>',
@@ -738,7 +739,6 @@ function getMessageText($case): string {
         "messageNotSent" => '<p class="failed">Fehler beim Senden der Nachricht</p>',
         "notificationOrDictionaryError" => '<p class="failed">Einstellungen nicht gespeichert. Entweder hast du nicht mindestens eine Benachrichtigungsart ausgewählt oder das Dictionary nicht im korrekten Format angegeben</p>',
         "receiveNotificationsForError" => '<p class="failed">Fehler beim Setzen der Benachrichtigungsarten</p>',
-        "howToContinue" => '<p class="successful">Um zu testen, ob du alles richtig gemacht hast, klicke auf "Testbenachrichtigungen senden".</p>',
         "noSlackBotToken" => '<p class="failed">Zuerst musst du oben den Slack Bot Token angeben und speichern. <br> Klicke auf das "?", um zu erfahren, wie du diesen erhalten kannst.</p>',
         default => "",
     };

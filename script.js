@@ -1,15 +1,8 @@
 hideLoadingAnimation();
 
-
-const scrollToBottom = () => {
-    document.getElementById('parent').scrollIntoView({ behavior: 'smooth', block: 'end' });
-}
-
-if(window.location.href.includes("settingsSavedSuccessfully") || window.location.href.includes("testnotificationsSentSuccessfully")) {
+if(window.location.href.includes("?settings") || window.location.href.includes("testNotification") || window.location.href.includes("noSlackBotToken") || window.location.href.includes("account")) {
     scrollToBottom();
 }
-
-
 
 document.addEventListener('click', function(event) {
     let infoFields = document.querySelectorAll('.info-field');
@@ -146,3 +139,8 @@ function hideLoadingAnimation() {
     document.getElementById('loading-animation').style.display = 'none';
 }
 
+
+
+function scrollToBottom() {
+    document.getElementById('parent').scrollIntoView({ behavior: 'smooth', block: 'end' });
+}

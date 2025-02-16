@@ -38,9 +38,6 @@ if (!$username || !$password) {
     logOut();
 }
 
-// how to automatically scroll down
-// https://stackoverflow.com/questions/270612/scroll-to-bottom-of-div
-
 
 $conn = null;
 $slackBotToken = "";
@@ -61,7 +58,8 @@ try {
     $receiveNotificationsFor = getValueFromDatabase($conn, "users", "receive_notifications_for", ["username" => $username], $username);
     $receiveNotificationsFor = explode(", ", $receiveNotificationsFor); // Convert comma-separated string to array
 } catch (DatabaseException $e) {
-    $btnResponse = getMessageText("dbError");
+    $btnResponse = "btnResponse=dbError";
+    header("Location: settings" . "?" . $btnResponse);
 }
 
 
@@ -95,19 +93,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action'])) {
         initiateCheck($conn, $username, $password);
         $previousSetupComplete = getValueFromDatabase($conn, "users", "setup_complete", ["username" => $username], $username);
         if (!$previousSetupComplete && $slackBotToken) {
-            $btnResponse = getMessageText("settingsSavedSuccessfully") . getMessageText("howToContinue");
+            $btnResponse = "btnResponse=settingsSavedSuccessfullyAndHowToContinue";
         } else {
-            $btnResponse = getMessageText("settingsSavedSuccessfully");
+            $btnResponse = "btnResponse=settingsSavedSuccessfully";
         }
+        header("Location: settings" . "?" . $btnResponse);
     } catch (DatabaseException $e) {
-        $btnResponse = getMessageText("settingsNotSaved");
+        $btnResponse = "btnResponse=settingsNotSaved";
+        header("Location: settings" . "?" . $btnResponse);
     } catch (UserException $e) {
         ErrorLogger::log($e->getMessage(), $username);
-        $btnResponse = getMessageText("notificationOrDictionaryError");
+        $btnResponse = "btnResponse=notificationOrDictionaryError";
+        header("Location: settings" . "?" . $btnResponse);
     }
 
     $conn->close();
-    //header("Location: settings?testnotificationsSentSuccessfully");
 }
 
 
@@ -116,7 +116,8 @@ if (isset($_POST['action'])) {
     try {
         $conn = connectToDatabase();
     } catch (DatabaseException $e) {
-        $btnResponse = getMessageText("dbConnError");
+        $btnResponse = "btnResponse=dbConnError";
+        header("Location: settings" . "?" . $btnResponse);
     }
     switch ($_POST['action']) {
         case 'logout':
@@ -130,12 +131,14 @@ if (isset($_POST['action'])) {
                 $conn->close();
                 logOut("?accountDeleted=true");
             } catch (DatabaseException $e) {
-                $btnResponse = getMessageText("accountNotDeleted");
+                $btnResponse = "btnResponse=accountNotDeleted";
+                header("Location: settings" . "?" . $btnResponse);
             }
             break;
         case 'testNotification':
             if(!$slackBotToken){
-                $btnResponse = getMessageText("noSlackBotToken");
+                $btnResponse = "btnResponse=noSlackBotToken";
+                header("Location: settings" . "?" . $btnResponse);
                 break;
             } else {
                 try {
@@ -146,23 +149,24 @@ if (isset($_POST['action'])) {
 
                     if ($testNotificationAusfall && $testNotificationRaumänderung && $testNotificationVertretung && $testNotificationSonstiges) {
                         if (updateDatabase($conn, "users", ["setup_complete"], ["username = ?"], [true, $username], $username)) {
-                            $btnResponse = getMessageText("testNotificationAllSent");
+                            $btnResponse = "btnResponse=testNotificationAllSent";
                         }
                     } elseif (!$testNotificationSonstiges && !$testNotificationVertretung && !$testNotificationRaumänderung && !$testNotificationAusfall) {
-                        $btnResponse = getMessageText("testNotificationAllNotSent");
+                        $btnResponse = "btnResponse=testNotificationAllNotSent";
                     } elseif (!$testNotificationAusfall) {
-                        $btnResponse = getMessageText("testNotificationAusfallNotSent");
+                        $btnResponse = "btnResponse=testNotificationAusfallNotSent";
                     } elseif (!$testNotificationRaumänderung) {
-                        $btnResponse = getMessageText("testNotificationRaumänderungNotSent");
+                        $btnResponse = "btnResponse=testNotificationRaumänderungNotSent";
                     } elseif (!$testNotificationVertretung) {
-                        $btnResponse = getMessageText("testNotificationVertretungNotSent");
+                        $btnResponse = "btnResponse=testNotificationVertretungNotSent";
                     } elseif (!$testNotificationSonstiges) {
-                        $btnResponse = getMessageText("testNotificationSonstigesNotSent");
+                        $btnResponse = "btnResponse=testNotificationSonstigesNotSent";
                     }
-                    //header("Location: settings?testnotificationsSentSuccessfully");
+                    header("Location: settings" . "?" . $btnResponse);
                     break;
                 } catch (Exception $e) {
-                    $btnResponse = getMessageText("testNotificationAllNotSent");
+                    $btnResponse = "btnResponse=testNotificationAllNotSent";
+                    header("Location: settings" . "?" . $btnResponse);
                     break;
                 }
             }
@@ -183,8 +187,9 @@ try {
     $checkboxRaumänderung = in_array("raumänderung", $receiveNotificationsFor) ? "checked" : "";
     $checkboxSonstiges = in_array("sonstiges", $receiveNotificationsFor) ? "checked" : "";
 } catch (Exception $e) {
-    $btnResponse = getMessageText("receiveNotificationsForError");
+    $btnResponse = "btnResponse=receiveNotificationsForError";
     ErrorLogger::log($e->getMessage(), $username);
+    header("Location: settings" . "?" . $btnResponse);
 }
 
 
@@ -287,7 +292,11 @@ try {
         <br><br>
         <button class="btn-save-settings btn" type="submit" onclick="showLoadingAnimation()">Einstellungen speichern</button>
         <br><br>
-        <?php echo $btnResponse; ?>
+        <?php
+        $btnResponse = $_GET['btnResponse'] ?? $btnResponse;
+        echo getMessageText($btnResponse);
+
+        ?>
     </form>
     <form action="settings" method="post">
         <button class="btn-testbenachrichtigung btn" type="submit" name="action" value="testNotification" onclick="showLoadingAnimation()">Testbenachrichtigungen senden</button><br>
