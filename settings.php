@@ -129,7 +129,7 @@ if (isset($_POST['action'])) {
                 ErrorLogger::log("Account successfully deleted", $username);
                 sleep(2);
                 $conn->close();
-                logOut("?accountDeleted=true");
+                logOut("?btnResponse=accountDeletedSuccessfully");
             } catch (DatabaseException $e) {
                 $btnResponse = "btnResponse=accountNotDeleted";
                 header("Location: settings" . "?" . $btnResponse);

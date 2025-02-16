@@ -70,9 +70,9 @@ if ($username && $password) {
 
 
 } else {
-    $accountDeleted = $_GET['accountDeleted'] ?? null;
-    if($accountDeleted) {
-        $loginMessage = getMessageText("accountDeletedSuccessfully");
+    $btnResponse = $_GET['btnResponse'] ?? null;
+    if($btnResponse) {
+        $loginMessage = getMessageText($btnResponse);
     } else {
         $loginMessage = "";
     }

@@ -1,6 +1,6 @@
 hideLoadingAnimation();
 
-if(window.location.href.includes("?settings") || window.location.href.includes("testNotification") || window.location.href.includes("noSlackBotToken") || window.location.href.includes("account")) {
+if(window.location.href.includes("settingsSaved") || window.location.href.includes("testNotification") || window.location.href.includes("noSlackBotToken") || window.location.href.includes("accountNotDeleted")) {
     scrollToBottom();
 }
 
