@@ -9,6 +9,7 @@ use Exceptions\DatabaseException;
 if(!checkIfURLExists("https://niklas.craft.me/kill-switch")) {
     ErrorLogger::log("The Kill-switch prevented the cronjob", "Cronjob");
 } else {
+    ErrorLogger::log("The Kill-switch was not triggered", "Cronjob");
 
     try {
         $conn = connectToDatabase();
