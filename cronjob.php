@@ -2,7 +2,6 @@
 
 
 require_once __DIR__ . "/functions.php";
-require_once __DIR__ . "/ErrorLogger.php";
 
 use Exceptions\DatabaseException;
 
@@ -10,7 +9,6 @@ use Exceptions\DatabaseException;
 if(!checkIfURLExists("https://niklas.craft.me/kill-switch")) {
     ErrorLogger::log("The Kill-switch prevented the cronjob", "Cronjob");
 } else {
-    ErrorLogger::log("The Kill-switch was not triggered", "Cronjob");
 
     try {
         $conn = connectToDatabase();
