@@ -40,7 +40,7 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
 
     try {
         deleteFromDatabase($conn, "timetables", ["for_date < ?"], [$currentDate], $username);
-        deleteFromDatabase($conn, "timetables", ["for_Date >= ?", "user = ?"], [$maxDateToCheck, $username], $username);
+        deleteFromDatabase($conn, "timetables", ["for_Date > ?", "user = ?"], [$maxDateToCheck, $username], $username);
     } catch (DatabaseException $e) {
         ErrorLogger::log(DATABASE_EXCEPTION_PREFIX . "; Alte Stundenplandaten nicht erfolgreich gelöscht; " . $e->getMessage(), $username);
     }
@@ -721,7 +721,7 @@ function sendSlackMessages($differences, $username, $conn): void {
 function getMessageText($case): string {
     return match ($case) {
         "loginFailed" => '<p class="failed">Fehler beim Einloggen</p>',
-        "settingsSavedSuccessfully" => '<p class="successful">Einstellungen erfolgreich gespeichert.</p>',
+        "settingsSavedSuccessfully" => '<p class="successful">Einstellungen erfolgreich gespeichert</p>',
         "settingsSavedSuccessfullyAndHowToContinue" => '<p class="successful">Einstellungen erfolgreich gespeichert. <br> Um zu testen, ob du alles richtig gemacht hast, klicke auf "Testbenachrichtigungen senden".</p>',
         "settingsNotSaved" => '<p class="failed">Fehler beim Speichern der Einstellungen</p>',
         "accountDeletedSuccessfully" => '<p class="successful">Konto erfolgreich gelöscht</p>',
@@ -737,7 +737,7 @@ function getMessageText($case): string {
         "emptyFields" => '<p class="failed">Bitte fülle alle Felder aus</p>',
         "messageSentSuccessfully" => '<p class="successful">Nachricht erfolgreich gesendet</p>',
         "messageNotSent" => '<p class="failed">Fehler beim Senden der Nachricht</p>',
-        "notificationOrDictionaryError" => '<p class="failed">Einstellungen nicht gespeichert. Entweder hast du nicht mindestens eine Benachrichtigungsart ausgewählt oder das Dictionary nicht im korrekten Format angegeben</p>',
+        "notificationOrDictionaryError" => '<p class="failed">Einstellungen nicht gespeichert. Entweder hast du nicht mindestens eine Benachrichtigungsart ausgewählt oder das Dictionary nicht im korrekten Format angegeben.</p>',
         "receiveNotificationsForError" => '<p class="failed">Fehler beim Setzen der Benachrichtigungsarten</p>',
         "noSlackBotToken" => '<p class="failed">Zuerst musst du oben den Slack Bot Token angeben und speichern. <br> Klicke auf das "?", um zu erfahren, wie du diesen erhalten kannst.</p>',
         default => "",
