@@ -145,7 +145,7 @@ if (isset($_POST['action'])) {
                     $testNotificationAusfall = sendSlackMessage($username, "ausfall", "Testbenachrichtigung für den Channel ausfall", " ", "", $conn);
                     $testNotificationRaumänderung = sendSlackMessage($username, "raumänderung", "Testbenachrichtigung für den Channel raumänderung", " ", "", $conn);
                     $testNotificationVertretung = sendSlackMessage($username, "vertretung", "Testbenachrichtigung für den Channel vertretung", " ", "", $conn);
-                    $testNotificationSonstiges = sendSlackMessage($username, "sonstiges", "Testbenachrichtigung für den Channel sonstiges", "Wenn du das hier liest, hast du alles richtig gemacht! (Solange auf der Website \"Alle 4 Testbenachrichtigungen erfolgreich gesendet\" stand.) Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind. Nun kannst du die Slack App überall dort installieren und dich anmelden, wo du benachrichtigt werden möchtest (Handy, iPad, usw.). In Einzelfällen (z.B. an Jokertagen, wenn bei Untis durch eine spezielle Veranstaltung auf einmal 2 \"Fächer\" für eine Stunde eingetragen sind) kann es sein, dass nicht alles richtig verarbeitet werden kann. Bei Fehlern oder Fragen mir gerne schreiben.", "", $conn);
+                    $testNotificationSonstiges = sendSlackMessage($username, "sonstiges", "Testbenachrichtigung für den Channel sonstiges", "Wenn du das hier liest, hast du alles richtig gemacht! (Solange auf der Website \"Alle 4 Testbenachrichtigungen erfolgreich gesendet\" stand.) Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind. Nun kannst du die Slack App überall dort installieren und dich anmelden, wo du benachrichtigt werden möchtest (Handy, iPad, usw.). In Einzelfällen (z.B. an Jokertagen, wenn bei Untis durch eine spezielle Veranstaltung auf einmal 2 \"Fächer\" für eine Stunde eingetragen sind oder bei Forder, Förder und Chor (Dingen, die auf Untis nicht im \"persönlichen\" Stundenplan stehen, sondern nur in dem für die gesamte Klasse)) kann es sein, dass nicht alles richtig verarbeitet werden kann. Bei Fehlern oder Fragen mir gerne schreiben.", "", $conn);
 
                     if ($testNotificationAusfall && $testNotificationRaumänderung && $testNotificationVertretung && $testNotificationSonstiges) {
                         if (updateDatabase($conn, "users", ["setup_complete"], ["username = ?"], [true, $username], $username)) {
@@ -305,12 +305,12 @@ try {
             <button class="btn-delete-acc btn" type="submit" name="action" value="deleteAccount" onclick="showLoadingAnimation()">Konto löschen</button>
         </nobr>
 
-        <?php
-        if ($username === "MüllerNik") {
-            echo '<br><button class="admin-panel-btn btn" type="submit" name="action" value="adminPanel" onclick="showLoadingAnimation()">Admin Panel</button>';
-
-        }
-        ?>
+<!--        --><?php
+//        if ($username === "MüllerNik") {
+//            echo '<br><button class="admin-panel-btn btn" type="submit" name="action" value="adminPanel" onclick="showLoadingAnimation()">Admin Panel</button>';
+//
+//        }
+//        ?>
 
     </form>
 </div>
