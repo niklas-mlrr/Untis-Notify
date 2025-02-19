@@ -96,7 +96,7 @@ if ($username && $password) {
         </button>
         <h2>Untis Notify</h2>
         <h4>- Benachrichtigungen für Untis -</h4>
-        <p class="info-text">Die Einrichtung dauert einmalig ca. 15 Min. und benötigt ein Handy & Pc / Laptop</p>
+        <p class="info-text">Die Einrichtung dauert einmalig ca. 20 Min. und benötigt ein Handy & Pc / Laptop</p>
         <br>
 
         <label for="username">Untis Benutzername:</label>
