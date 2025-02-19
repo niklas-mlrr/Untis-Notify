@@ -305,12 +305,12 @@ try {
             <button class="btn-delete-acc btn" type="submit" name="action" value="deleteAccount" onclick="showLoadingAnimation()">Konto löschen</button>
         </nobr>
 
-<!--        --><?php
-//        if ($username === "MüllerNik") {
-//            echo '<br><button class="admin-panel-btn btn" type="submit" name="action" value="adminPanel" onclick="showLoadingAnimation()">Admin Panel</button>';
-//
-//        }
-//        ?>
+        <?php
+        if ($username === "MüllerNik") {
+            echo '<br><button class="admin-panel-btn btn" type="submit" name="action" value="adminPanel" onclick="showLoadingAnimation()">Admin Panel</button>';
+
+        }
+        ?>
 
     </form>
 </div>
