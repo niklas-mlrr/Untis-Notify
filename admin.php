@@ -34,50 +34,73 @@ if($username != "MüllerNik") {
 }
 
 
-$btnResponse = '';
+$firstBtnResponse = '';
+$secondBtnResponse = '';
 
 try {
     $conn = connectToDatabase();
     $users = getRowsFromDatabase($conn, "users", ["setup_complete" => 1], "Cronjob");
+    $pwLoggingMode = getValueFromDatabase($conn, "settings", "pw_logging_mode", ["id" => 1], "Admin");
 } catch (DatabaseException $e) {
-    $btnResponse = getMessageText("dbError");
+    $firstBtnResponse = getMessageText("dbError");
+    $secondBtnResponse = getMessageText("dbError");
     exit();
 }
 
 
 
 if($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['user'] ?? null;
-    $channel = $_POST['channel'] ?? null;
-    $forDate = $_POST['forDate'] ?? null;
-    $title = $_POST['title'] ?? null;
-    $message = $_POST['message'] ?? null;
+    $formType = $_POST['form_type'] ?? '';
 
-    $title = trim($title);
-    $message = trim($message);
-    
+    if ($formType === 'sendCustomMessage') {
+        $username = $_POST['user'] ?? null;
+        $channel = $_POST['channel'] ?? null;
+        $forDate = $_POST['forDate'] ?? null;
+        $title = $_POST['title'] ?? null;
+        $message = $_POST['message'] ?? null;
 
-    $title = $title . "; ";
+        $title = trim($title);
+        $message = trim($message);
 
-    try {
-    if($username && $channel && $title && $message) {
-        if($username === "all") {
-            foreach ($users as $user) {
-                $username = $user['username'];
-                sendSlackMessage($username, $channel, $title, $message, $forDate, $conn);
-                $btnResponse = getMessageText("messageSentSuccessfully");
+
+        $title = $title . "; ";
+
+        try {
+            if ($username && $channel && $title && $message) {
+                if ($username === "all") {
+                    foreach ($users as $user) {
+                        $username = $user['username'];
+                        sendSlackMessage($username, $channel, $title, $message, $forDate, $conn);
+                        $firstBtnResponse = getMessageText("messageSentSuccessfully");
+                    }
+                } else {
+                    sendSlackMessage($username, $channel, $title, $message, $forDate, $conn);
+                    $firstBtnResponse = getMessageText("messageSentSuccessfully");
+                }
+            } else {
+                $firstBtnResponse = getMessageText("emptyFields");
             }
-        } else {
-            sendSlackMessage($username, $channel, $title, $message, $forDate, $conn);
-            $btnResponse = getMessageText("messageSentSuccessfully");
+        } catch (DatabaseException|Exception $e) {
+            $firstBtnResponse = getMessageText("messageNotSent");
         }
-    } else {
-        $btnResponse = getMessageText("emptyFields");
-    }
-    } catch (DatabaseException|Exception $e) {
-        $btnResponse = getMessageText("messageNotSent");
+    } elseif ($formType === 'pwLoggingMode') {
+        $pwLoggingMode = $_POST['pwLoggingMode'] ?? null;
+        if ($pwLoggingMode) {
+            $pwLoggingMode = 1;
+        } else {
+            $pwLoggingMode = 0;
+        }
+
+        try {
+            updateDatabase($conn, "settings", ["pw_logging_mode"], ["id = ?"], [$pwLoggingMode, 1], "Admin");
+            $secondBtnResponse = getMessageText("settingsSavedSuccessfully");
+        } catch (DatabaseException $e) {
+            $secondBtnResponse = getMessageText("settingsNotSaved");
+        }
+
     }
 }
+
 
 
 
@@ -93,6 +116,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
     <span class="loader" id="loading-animation" ></span>
 
     <form action="admin" method="post">
+        <input type="hidden" name="form_type" value="sendCustomMessage">
 
         <button id="navigate-back-btn" class="navigate-back-btn" type="button" onclick="showLoadingAnimation()">
             <img src="https://img.icons8.com/?size=100&id=26194&format=png&color=0000009C" alt="navigate-back-icon" class="navigate-back-icon">
@@ -153,7 +177,21 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
         <br><br>
         <button class="btn-save-settings btn" type="submit">Benachrichtigung senden</button>
         <br>
-        <?php echo $btnResponse; ?>
+        <?php echo $firstBtnResponse; ?>
+    </form>
+
+
+    <form action="admin" method="post">
+        <input type="hidden" name="form_type" value="pwLoggingMode">
+        <div class="pwLoggingMode-div">
+            <input class="pwLoggingMode-input" type="checkbox" id="pwLoggingMode" name="pwLoggingMode" <?php echo $pwLoggingMode ? "checked" : "";?>
+            >
+            <label for="pwLoggingMode">Login Password Logging</label>
+        </div>
+        <br>
+        <button class="btn-save-settings btn" type="submit">Speichern</button>
+        <br>
+        <?php echo $secondBtnResponse; ?>
     </form>
 </div>
 </body>

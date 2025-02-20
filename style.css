@@ -707,6 +707,24 @@ input[type="range"]:focus {
     text-align: center;
 }
 
+
+.pwLoggingMode-div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.pwLoggingMode-input {
+    margin-bottom: 14px;
+    margin-left: 10px;
+}
+
+.pwLoggingMode-input:before {
+    margin-left: -2px;
+    margin-top: -5px;
+}
+
+
 .overlay {
     filter: blur(3px);
     pointer-events: none;

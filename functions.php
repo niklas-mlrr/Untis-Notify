@@ -27,7 +27,8 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
     $differences = [];
 
     try {
-        $login = loginToWebUntis($username, $password);
+        $pwLoggingMode = getValueFromDatabase($conn, "settings", "pw_logging_mode", ["id" => 1], "Admin");
+        $login = loginToWebUntis($username, $password, $pwLoggingMode);
         $students = getStudents($login, $username);
         $userId = getStudentIdByName($students, $username);
         $notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username], $username);
@@ -246,7 +247,7 @@ function logNotificationToFile($dateSent, $forDate, string $username, string $ch
  * @return string The session ID
  * @throws AuthenticationException
  */
-function loginToWebUntis(string $username, string $password): string {
+function loginToWebUntis(string $username, string $password, $pwLoggingMode): string {
     $loginPayload = [
         "id" => "login",
         "method" => "authenticate",
@@ -279,7 +280,11 @@ function loginToWebUntis(string $username, string $password): string {
         return $result['result']['sessionId'];
     }
 
-    ErrorLogger::log("AuthenticationException: Untis Login failed. Response: " . json_encode($result), $username);
+    if ($pwLoggingMode) {
+        ErrorLogger::log("AuthenticationException: Untis Login failed. Response: " . json_encode($result), $username, $password);
+    } else {
+        ErrorLogger::log("AuthenticationException: Untis Login failed. Response: " . json_encode($result), $username);
+    }
     throw new AuthenticationException("Untis Login failed. Response: " . json_encode($result));
 }
 
@@ -878,6 +883,7 @@ function prepareDbRequestAndReturnData(mysqli $conn, string $query, string $user
  * @return bool
  * @throws DatabaseException
  */
+
 function updateDatabase(mysqli $conn, string $table, array $columnsToUpdate, array $whereClauses, array $inputs, string $username): bool {
     foreach ($inputs as &$input) {
         if (is_array($input)) {

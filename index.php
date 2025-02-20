@@ -37,8 +37,9 @@ if ($username && $password) {
     $password = trim($password);
 
     try {
-        $sessionId = loginToWebUntis($username, $password);
         $conn = connectToDatabase();
+        $pwLoggingMode = getValueFromDatabase($conn, "settings", "pw_logging_mode", ["id" => 1], "Admin");
+        $sessionId = loginToWebUntis($username, $password, $pwLoggingMode);
 
 
         $isUserInDatabaseAndAuthenticated = authenticateEncryptedPassword($conn, $username, $password);

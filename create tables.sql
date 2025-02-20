@@ -25,3 +25,4 @@ CREATE TABLE `users` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+
