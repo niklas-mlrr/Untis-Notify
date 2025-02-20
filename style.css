@@ -277,6 +277,10 @@ input[type="range"]:focus {
     text-align: center;
 }
 
+.untis-website-link {
+    color: #cc5151;
+}
+
 .btn {
     border: none;
     background-color: var(--button-background-color);
@@ -734,3 +738,4 @@ input[type="range"]:focus {
         transform: rotate(360deg);
     }
 }
+

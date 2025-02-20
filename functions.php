@@ -721,6 +721,10 @@ function sendSlackMessages($differences, $username, $conn): void {
 function getMessageText($case): string {
     return match ($case) {
         "loginFailed" => '<p class="failed">Fehler beim Einloggen</p>',
+        "loginFailedBadCredentials" => '
+        <p class="failed">Fehler beim Einloggen. <br> Versuche zuerst, dich auf der<br>
+        <a class="untis-website-link" href="https://niobe.webuntis.com/WebUntis/?school=gym-osterode#/basic/login" target="_blank">Untis-Website</a>
+        mit deinem Benutzernamen & Passwort anzumelden. Dann sollte es auch hier funktionieren.</p>',
         "settingsSavedSuccessfully" => '<p class="successful">Einstellungen erfolgreich gespeichert</p>',
         "settingsSavedSuccessfullyAndHowToContinue" => '<p class="successful">Einstellungen erfolgreich gespeichert. <br> Um zu testen, ob du alles richtig gemacht hast, klicke auf "Testbenachrichtigungen senden".</p>',
         "settingsNotSaved" => '<p class="failed">Fehler beim Speichern der Einstellungen</p>',

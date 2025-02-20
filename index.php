@@ -66,6 +66,10 @@ if ($username && $password) {
 
     } catch (AuthenticationException | Exception $e) {
         $loginMessage = getMessageText("loginFailed");
+        if (str_contains($e->getMessage(), 'bad credentials')) {
+            $loginMessage = getMessageText("loginFailedBadCredentials");
+        }
+
     }
 
 
