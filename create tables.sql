@@ -26,3 +26,13 @@ CREATE TABLE `users` (
     UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
 
+
+CREATE TABLE `settings` (
+    `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+    `pw_logging_mode` tinyint(1) DEFAULT '0'
+    PRIMARY KEY (`id`),
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+INSERT INTO `settings` (`id`, `pw_logging_mode`) VALUES
+    (1, 0);
+
