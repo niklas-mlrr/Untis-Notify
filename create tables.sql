@@ -1,14 +1,3 @@
-CREATE TABLE `timetables` (
-    `id` int unsigned NOT NULL AUTO_INCREMENT,
-    `timetable_data` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-    `user` varchar(20) COLLATE utf8mb4_general_ci NOT NULL,
-    `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `for_date` date NOT NULL,
-    PRIMARY KEY (`id`),
-    KEY `user` (`user`),
-    CONSTRAINT `timetables` FOREIGN KEY (`user`) REFERENCES `users` (`username`) ON DELETE CASCADE,
-    CONSTRAINT `timetables_chk_1` CHECK (json_valid(`timetable_data`))
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
 
 CREATE TABLE `users` (
     `id` int unsigned NOT NULL AUTO_INCREMENT,
@@ -26,11 +15,23 @@ CREATE TABLE `users` (
     UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
 
+CREATE TABLE `timetables` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT,
+    `timetable_data` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+    `user` varchar(20) COLLATE utf8mb4_general_ci NOT NULL,
+    `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `for_date` date NOT NULL,
+    PRIMARY KEY (`id`),
+    KEY `user` (`user`),
+    CONSTRAINT `timetables` FOREIGN KEY (`user`) REFERENCES `users` (`username`) ON DELETE CASCADE,
+    CONSTRAINT `timetables_chk_1` CHECK (json_valid(`timetable_data`))
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+
 
 CREATE TABLE `settings` (
     `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
-    `pw_logging_mode` tinyint(1) DEFAULT '0'
-    PRIMARY KEY (`id`),
+    `pw_logging_mode` tinyint(1) DEFAULT '0',
+    PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO `settings` (`id`, `pw_logging_mode`) VALUES
