@@ -150,6 +150,7 @@ if (isset($_POST['action'])) {
                     if ($testNotificationAusfall && $testNotificationRaumänderung && $testNotificationVertretung && $testNotificationSonstiges) {
                         if (updateDatabase($conn, "users", ["setup_complete"], ["username = ?"], [true, $username], $username)) {
                             $btnResponse = "btnResponse=testNotificationAllSent";
+                            ErrorLogger::log("User $username completed the setup.");
                         }
                     } elseif (!$testNotificationSonstiges && !$testNotificationVertretung && !$testNotificationRaumänderung && !$testNotificationAusfall) {
                         $btnResponse = "btnResponse=testNotificationAllNotSent";
