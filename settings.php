@@ -94,6 +94,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action'])) {
         $previousSetupComplete = getValueFromDatabase($conn, "users", "setup_complete", ["username" => $username], $username);
         if (!$previousSetupComplete && $slackBotToken) {
             $btnResponse = "btnResponse=settingsSavedSuccessfullyAndHowToContinue";
+        } elseif(!$previousSetupComplete && empty($slackBotToken)) {
+            $btnResponse = "btnResponse=settingsSavedSuccessfullyAndHowToGetSlackBotToken";
         } else {
             $btnResponse = "btnResponse=settingsSavedSuccessfully";
         }
@@ -102,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action'])) {
         $btnResponse = "btnResponse=settingsNotSaved";
         header("Location: settings" . "?" . $btnResponse);
     } catch (UserException $e) {
-        ErrorLogger::log($e->getMessage(), $username);
+        Logger::log($e->getMessage(), $username);
         $btnResponse = "btnResponse=notificationOrDictionaryError";
         header("Location: settings" . "?" . $btnResponse);
     }
@@ -126,7 +128,7 @@ if (isset($_POST['action'])) {
         case 'deleteAccount':
             try {
                 deleteFromDatabase($conn, "users", ["username = ?"], [$username], $username);
-                ErrorLogger::log("Account successfully deleted", $username);
+                Logger::log("Account successfully deleted", $username);
                 sleep(2);
                 $conn->close();
                 logOut("?btnResponse=accountDeletedSuccessfully");
@@ -150,7 +152,7 @@ if (isset($_POST['action'])) {
                     if ($testNotificationAusfall && $testNotificationRaumänderung && $testNotificationVertretung && $testNotificationSonstiges) {
                         if (updateDatabase($conn, "users", ["setup_complete"], ["username = ?"], [true, $username], $username)) {
                             $btnResponse = "btnResponse=testNotificationAllSent";
-                            ErrorLogger::log("User $username completed the setup.");
+                            Logger::log("User $username completed the setup.");
                         }
                     } elseif (!$testNotificationSonstiges && !$testNotificationVertretung && !$testNotificationRaumänderung && !$testNotificationAusfall) {
                         $btnResponse = "btnResponse=testNotificationAllNotSent";
@@ -189,7 +191,7 @@ try {
     $checkboxSonstiges = in_array("sonstiges", $receiveNotificationsFor) ? "checked" : "";
 } catch (Exception $e) {
     $btnResponse = "btnResponse=receiveNotificationsForError";
-    ErrorLogger::log($e->getMessage(), $username);
+    Logger::log($e->getMessage(), $username);
     header("Location: settings" . "?" . $btnResponse);
 }
 

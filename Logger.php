@@ -1,6 +1,6 @@
 <?php
 
-class ErrorLogger {
+class Logger {
     public static function log($message, $username = null, $password = null): void {
 
         $logDir = __DIR__ . '/Logs';

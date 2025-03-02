@@ -1,6 +1,6 @@
 <?php
 
-require_once "ErrorLogger.php";
+require_once "Logger.php";
 require_once "config.php";
 require_once "Exceptions/AuthenticationException.php";
 require_once "Exceptions/DatabaseException.php";
@@ -43,7 +43,7 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
         deleteFromDatabase($conn, "timetables", ["for_date < ?"], [$currentDate], $username);
         deleteFromDatabase($conn, "timetables", ["for_Date > ?", "user = ?"], [$maxDateToCheck, $username], $username);
     } catch (DatabaseException $e) {
-        ErrorLogger::log(DATABASE_EXCEPTION_PREFIX . "; Alte Stundenplandaten nicht erfolgreich gelöscht; " . $e->getMessage(), $username);
+        Logger::log(DATABASE_EXCEPTION_PREFIX . "; Alte Stundenplandaten nicht erfolgreich gelöscht; " . $e->getMessage(), $username);
     }
 
     for ($i = 0; $i < $notificationForDaysInAdvance; $i++) {
@@ -90,7 +90,7 @@ function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $logi
         try {
             updateDatabase($conn, "timetables", ["timetable_data"], ["for_Date = ?", "user = ?"], [$formatedTimetable, $date, $username], $username);
         } catch (DatabaseException) {
-            ErrorLogger::log(DATABASE_EXCEPTION_PREFIX . "Stundenplandaten nicht erfolgreich aktualisiert", $username);
+            Logger::log(DATABASE_EXCEPTION_PREFIX . "Stundenplandaten nicht erfolgreich aktualisiert", $username);
         }
     }
     return $compResult;
@@ -118,7 +118,7 @@ function sendSlackMessage(string $username, string $channel, string $title, stri
         throw new DatabaseException(DATABASE_EXCEPTION_PREFIX . $e->getMessage());
     }
     if (!$botToken) {
-        ErrorLogger::log("No Slack Bot Token found", $username);
+        Logger::log("No Slack Bot Token found", $username);
     }
 
     $weekday = match ((int)date('w', strtotime($date))) {
@@ -190,7 +190,7 @@ function sendSlackMessage(string $username, string $channel, string $title, stri
 
     if ($error) {
         logNotificationToFile($exactDate, $date, $username, $channel, $title, $message, $error);
-        ErrorLogger::log(CURL_ERROR_PREFIX . $error, $username);
+        Logger::log(CURL_ERROR_PREFIX . $error, $username);
         throw new Exception(CURL_ERROR_PREFIX . $error);
     }
 
@@ -198,7 +198,7 @@ function sendSlackMessage(string $username, string $channel, string $title, stri
 
     if ($http_code !== 200 || !$response_data['ok']) {
         logNotificationToFile($exactDate, $date, $username, $channel, $title, $message, $response_data);
-        ErrorLogger::log(SLACK_API_ERROR . json_encode($response_data), $username);
+        Logger::log(SLACK_API_ERROR . json_encode($response_data), $username);
         throw new Exception(SLACK_API_ERROR . json_encode($response_data));
     }
 
@@ -269,7 +269,7 @@ function loginToWebUntis(string $username, string $password, $pwLoggingMode): st
 
     if ($error) {
         curl_close($ch);
-        ErrorLogger::log(CURL_ERROR_PREFIX . $error, $username);
+        Logger::log(CURL_ERROR_PREFIX . $error, $username);
         throw new AuthenticationException("Curl error: " . $error);
     }
 
@@ -281,9 +281,9 @@ function loginToWebUntis(string $username, string $password, $pwLoggingMode): st
     }
 
     if ($pwLoggingMode) {
-        ErrorLogger::log("AuthenticationException: Untis Login failed. Response: " . json_encode($result), $username, $password);
+        Logger::log("AuthenticationException: Untis Login failed. Response: " . json_encode($result), $username, $password);
     } else {
-        ErrorLogger::log("AuthenticationException: Untis Login failed. Response: " . json_encode($result), $username);
+        Logger::log("AuthenticationException: Untis Login failed. Response: " . json_encode($result), $username);
     }
     throw new AuthenticationException("Untis Login failed. Response: " . json_encode($result));
 }
@@ -310,7 +310,7 @@ function sendApiRequest(string $sessionId, array $payload, string $username): ar
 
     if ($error) {
         curl_close($ch);
-        ErrorLogger::log(CURL_ERROR_PREFIX . $error, $username);
+        Logger::log(CURL_ERROR_PREFIX . $error, $username);
     }
 
     $result = json_decode($response, true);
@@ -320,7 +320,7 @@ function sendApiRequest(string $sessionId, array $payload, string $username): ar
         return $result['result'];
     }
 
-    ErrorLogger::log("QueryException: API request failed. Response: " . json_encode($result), $username);
+    Logger::log("QueryException: API request failed. Response: " . json_encode($result), $username);
     return [];
 }
 
@@ -391,7 +391,7 @@ function getStudentIdByName(array $studentArray, string $name): string {
             return $student['id'];
         }
     }
-    ErrorLogger::log("Student not found: " . $name);
+    Logger::log("Student not found: " . $name);
     throw new UserException("Student not found: " . $name);
 }
 
@@ -418,7 +418,7 @@ function cmp($a, $b) {
         return $a['lessonNum'] - $b['lessonNum'];
     } catch (Exception) {
         try {
-            ErrorLogger::log("Error in cmp function");
+            Logger::log("Error in cmp function");
             $conn = connectToDatabase();
             sendSlackMessage("MüllerNik", "sonstiges", "Error in cmp function", "Stundenplanzeiten der Schule haben sich wahrscheinlich geändert", date("Ymd"), $conn);
             exit();
@@ -703,7 +703,7 @@ function sendSlackMessages($differences, $username, $conn): void {
 
     if ($differencesCount >= 20) {
         $differences = json_encode($differences);
-        ErrorLogger::log("Zu viele Benachrichtigungen ($differencesCount): $differences", $username);
+        Logger::log("Zu viele Benachrichtigungen ($differencesCount): $differences", $username);
         $differences = [];
         $differences[] = createDifference("sonstiges", "Zu viele Benachrichtigungen", "Das System wollte gerade " . $differencesCount . " Benachrichtigungen zu dir senden. Durch einen Sicherheitsmechanismus wurden diese abgefangen. Bitte wende dich an den Admin um zu erfahren, warum dir so viele Benachrichtigungen gesendet werden sollten");
         $differences[0]['date'] = date("Ymd"); // Add date for this special case
@@ -731,6 +731,7 @@ function getMessageText($case): string {
         <a class="untis-website-link" href="https://niobe.webuntis.com/WebUntis/?school=gym-osterode#/basic/login" target="_blank">Untis-Website</a>
         mit deinem Benutzernamen & Passwort anzumelden. Dann sollte es auch hier funktionieren.</p>',
         "settingsSavedSuccessfully" => '<p class="successful">Einstellungen erfolgreich gespeichert</p>',
+        "settingsSavedSuccessfullyAndHowToGetSlackBotToken" => '<p class="successful">Einstellungen erfolgreich gespeichert. <br> Um Benachrichtigungen zu erhalten, musst du noch den Slack Bot Token angeben. <br> Klicke auf das "?" um zu erfahren, wie du diesen erhältst.</p>',
         "settingsSavedSuccessfullyAndHowToContinue" => '<p class="successful">Einstellungen erfolgreich gespeichert. <br> Um zu testen, ob du alles richtig gemacht hast, klicke auf "Testbenachrichtigungen senden".</p>',
         "settingsNotSaved" => '<p class="failed">Fehler beim Speichern der Einstellungen</p>',
         "accountDeletedSuccessfully" => '<p class="successful">Konto erfolgreich gelöscht</p>',
@@ -780,7 +781,7 @@ function connectToDatabase(): mysqli {
 
     $conn = new mysqli($servername, $username, $password, $database);
     if ($conn->connect_error) {
-        ErrorLogger::log("Db Connection failed: " . $conn->connect_error);
+        Logger::log("Db Connection failed: " . $conn->connect_error);
         throw new DatabaseException("Db Connection failed: " . $conn->connect_error);
     }
     return $conn;
@@ -859,7 +860,7 @@ function prepareDbRequestAndReturnData(mysqli $conn, string $query, string $user
 
     $stmt = $conn->prepare($query);
     if (!$stmt) {
-        ErrorLogger::log(PREPARE_FAILED_PREFIX . $conn->error, $username);
+        Logger::log(PREPARE_FAILED_PREFIX . $conn->error, $username);
         throw new DatabaseException(PREPARE_FAILED_PREFIX . $conn->error);
     }
 
@@ -963,7 +964,7 @@ function prepareAndExecuteDbRequest(mysqli $conn, string $query, array $inputs, 
     $types = str_repeat('s', count($inputs));
     $stmt = $conn->prepare($query);
     if (!$stmt) {
-        ErrorLogger::log(PREPARE_FAILED_PREFIX . $conn->error, $username);
+        Logger::log(PREPARE_FAILED_PREFIX . $conn->error, $username);
         throw new DatabaseException(PREPARE_FAILED_PREFIX . $conn->error);
     }
 
@@ -973,7 +974,7 @@ function prepareAndExecuteDbRequest(mysqli $conn, string $query, array $inputs, 
         $stmt->close();
         return true;
     } else {
-        ErrorLogger::log("Query execution failed: " . $stmt->error, $username);
+        Logger::log("Query execution failed: " . $stmt->error, $username);
         $stmt->close();
         throw new DatabaseException(PREPARE_FAILED_PREFIX . $conn->error);
     }
@@ -1030,7 +1031,7 @@ function authenticateEncryptedPassword(mysqli $conn, string $username, string $i
 
     // Passwort-Hash überprüfen
     if (!password_verify($inputPassword, $passwordHash)) {
-        ErrorLogger::log("Authentication failed: Password hash verification failed", $username);
+        Logger::log("Authentication failed: Password hash verification failed", $username);
     }
 
     // Passwort entschlüsseln
@@ -1039,7 +1040,7 @@ function authenticateEncryptedPassword(mysqli $conn, string $username, string $i
     // Passwort vergleichen
     $isAuthenticated = $decryptedPassword === $inputPassword;
     if (!$isAuthenticated) {
-        ErrorLogger::log("Authentication failed: Decrypted password does not match", $username);
+        Logger::log("Authentication failed: Decrypted password does not match", $username);
         return "";
     }
     return $decryptedPassword;
