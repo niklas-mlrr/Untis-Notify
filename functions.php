@@ -5,10 +5,12 @@ require_once "config.php";
 require_once "Exceptions/AuthenticationException.php";
 require_once "Exceptions/DatabaseException.php";
 require_once "Exceptions/UserException.php";
+require_once "Exceptions/APIException.php";
 
 use Exceptions\AuthenticationException;
 use Exceptions\DatabaseException;
 use Exceptions\UserException;
+use Exceptions\APIException;
 
 
 const DATABASE_EXCEPTION_PREFIX = 'DatabaseException: ';
@@ -33,6 +35,9 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
         $userId = getStudentIdByName($students, $username);
         $notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username], $username);
     } catch (AuthenticationException|DatabaseException|UserException) {
+        return;
+    } catch (APIException $e) {
+        Logger::log("APIException: Students konnten nicht abgerufen werden, API Response: $e", $username);
         return;
     }
 
@@ -61,9 +66,10 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
  * @param string $login
  * @param int $userId
  * @param string $username
+ * @param bool|null $secondRunOfFunction
  * @return array
  */
-function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $login, int $userId, string $username): array {
+function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $login, int $userId, string $username, bool $secondRunOfFunction = false): array {
     try {
         $timetable = getTimetable($login, $userId, $date, $username);
         $replacements = getValueFromDatabase($conn, "users", "dictionary", ["username" => $username], $username);
@@ -81,6 +87,14 @@ function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $logi
 
     } catch (DatabaseException) {
         return [];
+    } catch (APIException $e) {
+        if($secondRunOfFunction) {
+            Logger::log("APIException: Auch beim 2. Durchlauf konnten die Stundenplandaten nicht erfolgreich abgerufen werden; API Response: $e", $username);
+            return [];
+        } else {
+            Logger::log("APIException: Stundenplandaten nicht erfolgreich abgerufen; API Response: $e", $username);
+            return checkCompareAndUpdateTimetable($date, $conn, $login, $userId, $username, true);
+        }
     }
 
 
@@ -293,6 +307,7 @@ function loginToWebUntis(string $username, string $password, $pwLoggingMode): st
  * @param array $payload
  * @param string $username
  * @return array
+ * @throws APIException
  */
 function sendApiRequest(string $sessionId, array $payload, string $username): array {
     $url = "https://niobe.webuntis.com/WebUntis/jsonrpc.do?school=gym-osterode";
@@ -311,6 +326,7 @@ function sendApiRequest(string $sessionId, array $payload, string $username): ar
     if ($error) {
         curl_close($ch);
         Logger::log(CURL_ERROR_PREFIX . $error, $username);
+        throw new APIException("Curl error: " . $error);
     }
 
     $result = json_decode($response, true);
@@ -320,8 +336,8 @@ function sendApiRequest(string $sessionId, array $payload, string $username): ar
         return $result['result'];
     }
 
-    Logger::log("QueryException: API request failed. Response: " . json_encode($result), $username);
-    return [];
+    Logger::log("Curl error: API request failed. Response: " . json_encode($result), $username);
+    throw new APIException("API request failed. Response: " . json_encode($result));
 }
 
 
@@ -331,6 +347,7 @@ function sendApiRequest(string $sessionId, array $payload, string $username): ar
  * @param string $date
  * @param string $username
  * @return array
+ * @throws APIException
  */
 function getTimetable(string $sessionId, int $userId, string $date, string $username): array {
     $payload = [
@@ -359,13 +376,18 @@ function getTimetable(string $sessionId, int $userId, string $date, string $user
         "jsonrpc" => "2.0"
     ];
 
-    return sendApiRequest($sessionId, $payload, $username);
+    try {
+        return sendApiRequest($sessionId, $payload, $username);
+    } catch (APIException $e) {
+        throw new APIException($e->getMessage());
+    }
 }
 
 /**
  * @param string $sessionId
  * @param string $username
  * @return array
+ * @throws APIException
  */
 function getStudents(string $sessionId, string $username): array {
     $payload = [
@@ -374,8 +396,11 @@ function getStudents(string $sessionId, string $username): array {
         "params" => [],
         "jsonrpc" => "2.0"
     ];
-
-    return sendApiRequest($sessionId, $payload, $username);
+    try {
+        return sendApiRequest($sessionId, $payload, $username);
+    } catch (APIException $e) {
+        throw new APIException($e->getMessage());
+    }
 }
 
 
