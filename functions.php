@@ -98,7 +98,7 @@ function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $logi
     }
 
 
-    $compResult = compareArrays($lastRetrieval, $formatedTimetable, $date);
+    $compResult = compareArrays($lastRetrieval, $formatedTimetable, $date, $username, $conn);
 
     if ($compResult != null) {
         try {
@@ -580,19 +580,20 @@ function chooseNotCanceledLesson(array $lesson1, array $lesson2): ?array {
 }
 
 
-
 /**
  * @param $array1 (= lastRetrieval)
  * @param $array2 (= formatedTimetable)
  * @param $date
+ * @param $username
+ * @param $conn
  * @return array
  */
-function compareArrays($array1, $array2, $date): array {
+function compareArrays($array1, $array2, $date, $username, $conn): array {
     $differences = [];
     $fachwechselLessons = [];
     list($canceledDifferences, $canceledLessons) = findCanceledItems($array1, $array2);
     $differences = array_merge($differences, $canceledDifferences);
-    $differences = array_merge($differences, findMissingItems($array1, $array2));
+    $differences = array_merge($differences, findMissingItems($array1, $array2, $username, $conn));
     $differences = array_merge($differences, findChangedItems($array1, $array2, $canceledLessons, $fachwechselLessons));
     $differences = array_merge($differences, findNewItems($array1, $array2));
     $differences = combineNotifications($differences);
@@ -606,12 +607,17 @@ function compareArrays($array1, $array2, $date): array {
 }
 
 
-function findMissingItems($array1, $array2): array {
-    $differences = [];
-    foreach ($array1 as $key => $item) {
-        if (!isset($array2[$key])) {
-            $differences[] = createDifference("sonstiges", "{$item['lessonNum']}. Stunde {$item['subject']} fehlt jetzt komplett", " ");
+function findMissingItems($array1, $array2, $username, $conn): array {
+    try {
+        $differences = [];
+        foreach ($array1 as $key => $item) {
+            if (!isset($array2[$key])) {
+                $differences[] = createDifference("sonstiges", "{$item['lessonNum']}. Stunde {$item['subject']} fehlt jetzt komplett", " ");
+                sendSlackMessage("MüllerNik", "sonstiges", "Fehlende Stunde bei User $username", "{$item['lessonNum']}. Stunde {$item['subject']} fehlt jetzt komplett", date("Ymd"), $conn);
+            }
         }
+    } catch (DatabaseException|Exception) {
+        return [];
     }
     return $differences;
 }
