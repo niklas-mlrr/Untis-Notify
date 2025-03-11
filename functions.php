@@ -246,9 +246,14 @@ function logNotificationToFile($dateSent, $forDate, string $username, string $ch
         $error
     );
 
-    $logDir = __DIR__ . '/Logs';
-    $logFile = $logDir . '/' . date('Y-m-d') . '-notifications.log';
+    $currentYear = date("Y");
+    $currentMonth = date("m");
 
+    $logDir = __DIR__ . "/Logs/$currentYear/$currentMonth";
+    $logFile = $logDir . '/' . date('Y-m-d') . '-notifications.log';
+    if(!file_exists($logDir)) {
+        mkdir($logDir, 0700, true);
+    }
     file_put_contents($logFile, $logEntry, FILE_APPEND);
 }
 
@@ -613,7 +618,9 @@ function findMissingItems($array1, $array2, $username, $conn): array {
         foreach ($array1 as $key => $item) {
             if (!isset($array2[$key])) {
                 $differences[] = createDifference("sonstiges", "{$item['lessonNum']}. Stunde {$item['subject']} fehlt jetzt komplett", " ");
-                sendSlackMessage("MüllerNik", "sonstiges", "Fehlende Stunde bei User $username", "{$item['lessonNum']}. Stunde {$item['subject']} fehlt jetzt komplett", date("Ymd"), $conn);
+                if($username != "MüllerNik") {
+                    sendSlackMessage("MüllerNik", "sonstiges", "Fehlende Stunde bei User $username", "{$item['lessonNum']}. Stunde {$item['subject']} fehlt jetzt komplett", date("Ymd"), $conn);
+                }
             }
         }
     } catch (DatabaseException|Exception) {
