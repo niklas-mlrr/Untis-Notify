@@ -5,12 +5,12 @@
 
 ### Whitemode:
 <div width="1000px">
-  <img src="https://github.com/user-attachments/assets/dca5602d-ad43-404d-b761-eb78a5d2bf9a" width="400px"/>
-  <img src="https://github.com/user-attachments/assets/8b8518ed-1b4f-44da-9a2c-40505aa2843e" width="400px"/> 
+  <img src="https://github.com/user-attachments/assets/55bd540b-c4f7-45d7-aee6-b9ee6ba45411" width="400px"/>
+  <img src="https://github.com/user-attachments/assets/9aa67f9e-83f6-46af-95f1-f4854c78caa2" width="400px"/> 
 </div>
 
 ### Darkmode:
 <div width="1000px">
-  <img src="https://github.com/user-attachments/assets/810296a1-5d42-4375-b568-f218d6dda284" width="400px"/>
-  <img src="https://github.com/user-attachments/assets/a2f6dcaf-6a4b-4d61-a97a-cd6362eba5a7" width="400px"/> 
+  <img src="https://github.com/user-attachments/assets/df95b704-dde2-47da-a47b-0acfd36798d4" width="400px"/>
+  <img src="https://github.com/user-attachments/assets/454e6331-3f43-40f2-892a-2c628304659f" width="400px"/> 
 </div>
