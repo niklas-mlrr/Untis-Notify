@@ -85,7 +85,7 @@ if ($username && $password) {
 
 
 <div class="img-div">
-    <img class="notification-img" src="notification example.PNG" alt="Notification Example">
+    <img class="notification-img" src="notification example.png" alt="Notification Example">
 </div>
 <br><br>
 <p class="notification-text">↑ Beispiel einer Benachrichtigung ↑</p>
