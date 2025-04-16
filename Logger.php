@@ -10,10 +10,10 @@ class Logger {
         $logFile = $logDir . '/' . date('Y-m-d') . '-log.log';
         $logMessage = '[' . date('d.m.Y H:i:s') . '] ';
         if ($username && $password) {
-            $logMessage .= 'Username: (' . $username . '); Password: (' . $password . '); ';
+            $logMessage .= "Username: ($username); Password: ($password); ";
         }
         if($username && !$password) {
-            $logMessage .= 'Username: (' . $username . '); ';
+            $logMessage .= "Username: $username; ";
         }
         $logMessage .= $message . PHP_EOL;
 

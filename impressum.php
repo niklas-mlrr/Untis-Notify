@@ -41,7 +41,7 @@
         <p>Niklas Müller<br>
             37520 Osterode am Harz</p>
         <p>Kontakt:<br>
-            <a class="email" href="mailto:deine-email@example.com">info@untis-notify.de</a>
+            <a class="email" href="mailto:info@untis-notify.de">info@untis-notify.de</a>
             <br><br>
             <a class="email" href="https://github.com/TechNikFuture/Untis-Notify" target="_blank">GitHub Repository</a>
         </p>

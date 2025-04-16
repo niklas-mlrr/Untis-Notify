@@ -1,6 +1,6 @@
 hideLoadingAnimation();
 
-if(window.location.href.includes("settingsSaved") || window.location.href.includes("testNotification") || window.location.href.includes("noSlackBotToken") || window.location.href.includes("accountNotDeleted")) {
+if(window.location.href.includes("settingsSaved") || window.location.href.includes("testNotification") || window.location.href.includes("noEmailAdress") || window.location.href.includes("accountNotDeleted")) {
     scrollToBottom();
 }
 
@@ -22,8 +22,8 @@ function openExternInfoSite(info) {
         case "password":
             url = "https://github.com/niklas-mlrr/Untis-Notify/wiki/Untis-Passwort-%C3%A4ndern";
             break;
-        case "BotToken":
-            url = "https://github.com/niklas-mlrr/Untis-Notify/wiki/Slack-Bot-Token-generieren";
+        case "EmailAdress":
+            url = "https://github.com/niklas-mlrr/Untis-Notify/wiki/Email-Adresse";
             break;
         case "dictionary":
             url = "https://github.com/niklas-mlrr/Untis-Notify/wiki/Personalisierbares-Dictionary-(optional)";

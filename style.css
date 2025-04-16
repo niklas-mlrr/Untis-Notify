@@ -268,12 +268,12 @@ input[type="range"]:focus {
 
 
 .failed {
-    color: red;
+    color: #ed2323;
     text-align: center;
 }
 
 .successful {
-    color: green;
+    color: #3abf3a;
     text-align: center;
 }
 

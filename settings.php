@@ -40,7 +40,7 @@ if (!$username || !$password) {
 
 
 $conn = null;
-$slackBotToken = "";
+$emailAdress = "";
 $dictionary = "";
 $notificationForDaysInAdvance = 0;
 $receiveNotificationsFor = [];
@@ -52,14 +52,13 @@ $checkboxSonstiges = "";
 
 try {
     $conn = connectToDatabase();
-    $slackBotToken = getValueFromDatabase($conn, "users", "slack_bot_token", ["username" => $username], $username);
+    $emailAdress = getValueFromDatabase($conn, "users", "email_adress", ["username" => $username], $username);
     $dictionary = getValueFromDatabase($conn, "users", "dictionary", ["username" => $username], $username);
     $notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username], $username);
     $receiveNotificationsFor = getValueFromDatabase($conn, "users", "receive_notifications_for", ["username" => $username], $username);
     $receiveNotificationsFor = explode(", ", $receiveNotificationsFor); // Convert comma-separated string to array
 } catch (DatabaseException $e) {
-    $btnResponse = "btnResponse=dbError";
-    header("Location: settings" . "?" . $btnResponse);
+    redirectToSettingsPage("dbError");
 }
 
 
@@ -68,14 +67,14 @@ initiateCheck($conn, $username, $password);
 
 
 
-$btnResponse = '';
+$messageToUser = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action'])) {
-    $slackBotToken = $_POST['slackBotToken'] ?? $slackBotToken;
+    $emailAdress = $_POST['emailAdress'] ?? $emailAdress;
     $dictionary = $_POST['dictionary'] ?? $dictionary;
     $notificationForDaysInAdvance = $_POST['notificationDays'] ?? $notificationForDaysInAdvance;
     $receiveNotificationsFor = $_POST['notifications'] ?? [];
 
-    $slackBotToken = trim($slackBotToken);
+    $emailAdress = trim($emailAdress);
     $dictionary = trim($dictionary);
 
 
@@ -89,24 +88,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action'])) {
         }
 
         $receiveNotificationsForString = implode(', ', $receiveNotificationsFor); // Convert array to comma-separated string
-        updateDatabase($conn, "users", ["slack_bot_token", "dictionary", "notification_for_days_in_advance", "receive_notifications_for"], ["username = ?"], [$slackBotToken, $dictionary, $notificationForDaysInAdvance, $receiveNotificationsForString, $username], $username);
+        updateDatabase($conn, "users", ["email_adress", "dictionary", "notification_for_days_in_advance", "receive_notifications_for"], ["username = ?"], [$emailAdress, $dictionary, $notificationForDaysInAdvance, $receiveNotificationsForString, $username], $username);
         initiateCheck($conn, $username, $password);
         $previousSetupComplete = getValueFromDatabase($conn, "users", "setup_complete", ["username" => $username], $username);
-        if (!$previousSetupComplete && $slackBotToken) {
-            $btnResponse = "btnResponse=settingsSavedSuccessfullyAndHowToContinue";
-        } elseif(!$previousSetupComplete && empty($slackBotToken)) {
-            $btnResponse = "btnResponse=settingsSavedSuccessfullyAndHowToGetSlackBotToken";
+        if (!$previousSetupComplete && $emailAdress) {
+            $URLParameterMessage = "settingsSavedSuccessfullyAndHowToContinue";
+        } elseif(!$previousSetupComplete && empty($emailAdress)) {
+            $URLParameterMessage = "settingsSavedSuccessfullyAndReferToEmail";
         } else {
-            $btnResponse = "btnResponse=settingsSavedSuccessfully";
+            $URLParameterMessage = "settingsSavedSuccessfully";
         }
-        header("Location: settings" . "?" . $btnResponse);
+        redirectToSettingsPage($URLParameterMessage);
     } catch (DatabaseException $e) {
-        $btnResponse = "btnResponse=settingsNotSaved";
-        header("Location: settings" . "?" . $btnResponse);
+        redirectToSettingsPage("settingsNotSaved");
     } catch (UserException $e) {
         Logger::log($e->getMessage(), $username);
-        $btnResponse = "btnResponse=notificationOrDictionaryError";
-        header("Location: settings" . "?" . $btnResponse);
+        redirectToSettingsPage("notificationOrDictionaryError");
     }
 
     $conn->close();
@@ -118,8 +115,7 @@ if (isset($_POST['action'])) {
     try {
         $conn = connectToDatabase();
     } catch (DatabaseException $e) {
-        $btnResponse = "btnResponse=dbConnError";
-        header("Location: settings" . "?" . $btnResponse);
+        redirectToSettingsPage("dbConnError");
     }
     switch ($_POST['action']) {
         case 'logout':
@@ -131,48 +127,33 @@ if (isset($_POST['action'])) {
                 Logger::log("Account successfully deleted", $username);
                 sleep(2);
                 $conn->close();
-                logOut("?btnResponse=accountDeletedSuccessfully");
+                logOut("accountDeletedSuccessfully");
             } catch (DatabaseException $e) {
-                $btnResponse = "btnResponse=accountNotDeleted";
-                header("Location: settings" . "?" . $btnResponse);
+                redirectToSettingsPage("accountNotDeleted");
             }
             break;
         case 'testNotification':
-            if(!$slackBotToken){
-                $btnResponse = "btnResponse=noSlackBotToken";
-                header("Location: settings" . "?" . $btnResponse);
+            if(!$emailAdress){
+                redirectToSettingsPage("noEmailAdress");
                 break;
             } else {
                 try {
-                    $testNotificationAusfall = sendSlackMessage($username, "ausfall", "Testbenachrichtigung für den Channel ausfall", " ", "", $conn);
-                    $testNotificationRaumänderung = sendSlackMessage($username, "raumänderung", "Testbenachrichtigung für den Channel raumänderung", " ", "", $conn);
-                    $testNotificationVertretung = sendSlackMessage($username, "vertretung", "Testbenachrichtigung für den Channel vertretung", " ", "", $conn);
-                    $testNotificationSonstiges = sendSlackMessage($username, "sonstiges", "Testbenachrichtigung für den Channel sonstiges", "Wenn du das hier liest, hast du alles richtig gemacht! Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Stundenplan gibt. Alle 10 Min. wird überprüft, ob Änderungen vorhanden sind. Nun kannst du die Slack App überall dort installieren und dich anmelden, wo du benachrichtigt werden möchtest (Handy, iPad, usw.). In Einzelfällen (z.B. an Jokertagen, wenn bei Untis durch eine spezielle Veranstaltung auf einmal 2 \"Fächer\" für eine Stunde eingetragen sind oder bei Forder, Förder und Chor (Dingen, die auf Untis nicht im \"persönlichen\" Stundenplan stehen, sondern nur in dem für die gesamte Klasse)) kann es sein, dass nicht alles richtig verarbeitet werden kann. Bei Fehlern oder Fragen mir gerne schreiben.", "", $conn);
+                    $testNotification = sendEmail($username, "Testbenachrichtigung", "Testbenachrichtigung", "", "", "", $conn);
 
-                    if ($testNotificationAusfall && $testNotificationRaumänderung && $testNotificationVertretung && $testNotificationSonstiges) {
-                        if (updateDatabase($conn, "users", ["setup_complete"], ["username = ?"], [true, $username], $username)) {
-                            $btnResponse = "btnResponse=testNotificationAllSent";
-                            Logger::log("User $username completed the setup");
-                        }
-                    } elseif (!$testNotificationSonstiges && !$testNotificationVertretung && !$testNotificationRaumänderung && !$testNotificationAusfall) {
-                        $btnResponse = "btnResponse=testNotificationAllNotSent";
-                    } elseif (!$testNotificationAusfall) {
-                        $btnResponse = "btnResponse=testNotificationAusfallNotSent";
-                    } elseif (!$testNotificationRaumänderung) {
-                        $btnResponse = "btnResponse=testNotificationRaumänderungNotSent";
-                    } elseif (!$testNotificationVertretung) {
-                        $btnResponse = "btnResponse=testNotificationVertretungNotSent";
-                    } elseif (!$testNotificationSonstiges) {
-                        $btnResponse = "btnResponse=testNotificationSonstigesNotSent";
+                    if ($testNotification && updateDatabase($conn, "users", ["setup_complete"], ["username = ?"], [true, $username], $username)) {
+                        Logger::log("User $username completed the setup");
+                        redirectToSettingsPage("testNotificationSent");
+                        break;
                     }
-                    header("Location: settings" . "?" . $btnResponse);
-                    break;
-                } catch (Exception $e) {
-                    $btnResponse = "btnResponse=testNotificationAllNotSent";
-                    header("Location: settings" . "?" . $btnResponse);
+                } catch (DatabaseException|UserException $e) {
+                    redirectToSettingsPage("testNotificationNotSent");
+                    if (str_contains($e, 'Invalid address')) {
+                        redirectToSettingsPage("testNotificationNotSentInvalidEmail");
+                    }
                     break;
                 }
             }
+            break;
         case 'adminPanel':
             $conn->close();
             header("Location: admin");
@@ -190,9 +171,8 @@ try {
     $checkboxRaumänderung = in_array("raumänderung", $receiveNotificationsFor) ? "checked" : "";
     $checkboxSonstiges = in_array("sonstiges", $receiveNotificationsFor) ? "checked" : "";
 } catch (Exception $e) {
-    $btnResponse = "btnResponse=receiveNotificationsForError";
     Logger::log($e->getMessage(), $username);
-    header("Location: settings" . "?" . $btnResponse);
+    redirectToSettingsPage("receiveNotificationsForError");
 }
 
 
@@ -212,10 +192,10 @@ try {
         <h2>Einstellungen</h2>
         <br>
 
-        <label for="slackBotToken">Slack Bot Token:</label>
+        <label for="emailAdress">Email-Adresse:</label>
         <div class="label-container">
-            <input type="text" id="slackBotToken" name="slackBotToken" value="<?php echo $slackBotToken; ?>" placeholder="xoxb-...">
-            <span class="info-icon" onclick="openExternInfoSite('BotToken')" onKeyDown="openExternInfoSite('BotToken')">?</span>
+            <input type="text" id="emailAdress" name="emailAdress" value="<?php echo $emailAdress; ?>" placeholder="deine.email@gmail.com">
+            <span class="info-icon" onclick="openExternInfoSite('EmailAdress')" onKeyDown="openExternInfoSite('EmailAdress')">?</span>
         </div>
         <br><br>
 
@@ -277,7 +257,7 @@ try {
                 </span>
             </label>
         </div>
-        <p class="info-text">*Hierzu zählen Dinge wie Fachwechsel, Raumaustragungen und Lehreraustragungen <br> (= oft eine Vorstufe von Ausfall / Vertretung)</p>
+        <p class="info-text">*Hierzu zählen Dinge wie Veranstaltungen, Raumaustragungen und Lehreraustragungen <br> (= oft eine Vorstufe von Ausfall / Vertretung)</p>
     </fieldset>
     <br><br>
 
@@ -296,8 +276,8 @@ try {
         <button class="btn-save-settings btn" type="submit" onclick="showLoadingAnimation()">Einstellungen speichern</button>
         <br><br>
         <?php
-        $btnResponse = $_GET['btnResponse'] ?? $btnResponse;
-        echo getMessageText($btnResponse);
+        $messageToUser = $_GET['messageToUser'] ?? $messageToUser;
+        echo getMessageText($messageToUser);
         ?>
     </form>
     <form action="settings" method="post">
@@ -308,7 +288,11 @@ try {
         </nobr>
 
         <?php
-        if ($username === "MüllerNik") {
+
+        global $config;
+        $adminUsername = $config['adminUsername'];
+
+        if ($username === $adminUsername) {
             echo '<br><button class="admin-panel-btn btn" type="submit" name="action" value="adminPanel" onclick="showLoadingAnimation()">Admin Panel</button>';
 
         }

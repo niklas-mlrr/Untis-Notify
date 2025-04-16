@@ -29,21 +29,24 @@ require_once "functions.php";
 
 $username = $_SESSION['username'] ?? null;
 
-if($username != "MüllerNik") {
+global $config;
+$adminUsername = $config['adminUsername'];
+
+if($username != $adminUsername) {
     logOut();
 }
 
 
-$firstBtnResponse = '';
-$secondBtnResponse = '';
+$firstMessageToUser = '';
+$secondMessageToUser = '';
 
 try {
     $conn = connectToDatabase();
     $users = getRowsFromDatabase($conn, "users", ["setup_complete" => 1], "Cronjob");
     $pwLoggingMode = getValueFromDatabase($conn, "settings", "pw_logging_mode", ["id" => 1], "Admin");
 } catch (DatabaseException $e) {
-    $firstBtnResponse = getMessageText("dbError");
-    $secondBtnResponse = getMessageText("dbError");
+    $firstMessageToUser = getMessageText("dbError");
+    $secondMessageToUser = getMessageText("dbError");
     exit();
 }
 
@@ -54,34 +57,35 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($formType === 'sendCustomMessage') {
         $username = $_POST['user'] ?? null;
-        $channel = $_POST['channel'] ?? null;
         $forDate = $_POST['forDate'] ?? null;
-        $title = $_POST['title'] ?? null;
+        $affectedLessons = $_POST['affectedLessons'] ?? null;
         $message = $_POST['message'] ?? null;
+        $oldValue = $_POST['oldValue'] ?? null;
 
-        $title = trim($title);
+
+        $affectedLessons = trim($affectedLessons);
         $message = trim($message);
+        $oldValue = trim($oldValue);
 
 
-        $title = $title . "; ";
 
         try {
-            if ($username && $channel && $title && $message) {
+            if ($username && $affectedLessons && $message) {
                 if ($username === "all") {
                     foreach ($users as $user) {
                         $username = $user['username'];
-                        sendSlackMessage($username, $channel, $title, $message, $forDate, $conn);
-                        $firstBtnResponse = getMessageText("messageSentSuccessfully");
+                        sendEmail($username, $affectedLessons, $message, $oldValue, "", $forDate, $conn);
+                        $firstMessageToUser = getMessageText("messageSentSuccessfully");
                     }
                 } else {
-                    sendSlackMessage($username, $channel, $title, $message, $forDate, $conn);
-                    $firstBtnResponse = getMessageText("messageSentSuccessfully");
+                    sendEmail($username, $affectedLessons, $message, $oldValue, "", $forDate, $conn);
+                    $firstMessageToUser = getMessageText("messageSentSuccessfully");
                 }
             } else {
-                $firstBtnResponse = getMessageText("emptyFields");
+                $firstMessageToUser = getMessageText("emptyFields");
             }
         } catch (DatabaseException|Exception $e) {
-            $firstBtnResponse = getMessageText("messageNotSent");
+            $firstMessageToUser = getMessageText("messageNotSent");
         }
     } elseif ($formType === 'pwLoggingMode') {
         $pwLoggingMode = $_POST['pwLoggingMode'] ?? null;
@@ -93,17 +97,13 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
             updateDatabase($conn, "settings", ["pw_logging_mode"], ["id = ?"], [$pwLoggingMode, 1], "Admin");
-            $secondBtnResponse = getMessageText("settingsSavedSuccessfully");
+            $secondMessageToUser = getMessageText("settingsSavedSuccessfully");
         } catch (DatabaseException $e) {
-            $secondBtnResponse = getMessageText("settingsNotSaved");
+            $secondMessageToUser = getMessageText("settingsNotSaved");
         }
 
     }
 }
-
-
-
-
 
 
 
@@ -143,18 +143,6 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <br>
 
-        <label for="channel">Channel:</label>
-        <div class="label-container">
-            <select id="channel" class="custom-message-select" name="channel" required>
-                <option disabled selected>Channel</option>
-                <option value="sonstiges">Sonstiges</option>
-                <option value="ausfall">Ausfall</option>
-                <option value="vertretung">Vertretung</option>
-                <option value="raumänderung">Raumänderung</option>
-            </select>
-        </div>
-        <br>
-
 
         <label for="forDate">For Date:</label>
         <div class="label-container">
@@ -162,9 +150,9 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <br>
 
-        <label for="title">Title:</label>
+        <label for="affectedLessons">Affected Lessons (part of title):</label>
         <div class="label-container">
-            <input type="text" id="title" name="title" placeholder="Title" required>
+            <input type="text" id="affectedLessons" name="affectedLessons" placeholder="Affected Lessons" required>
         </div>
         <br>
 
@@ -172,12 +160,18 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="label-container">
             <textarea id="message" class="message-textarea" name="message" placeholder="Message" required></textarea>
         </div>
+        <br>
+
+        <label for="oldValue">Old Value:</label>
+        <div class="label-container">
+            <input type="text" id="oldValue" name="oldValue" placeholder="OldValue">
+        </div>
 
 
         <br><br>
         <button class="btn-save-settings btn" type="submit">Benachrichtigung senden</button>
         <br>
-        <?php echo $firstBtnResponse; ?>
+        <?php echo $firstMessageToUser; ?>
     </form>
 
 
@@ -191,7 +185,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
         <br>
         <button class="btn-save-settings btn" type="submit">Speichern</button>
         <br>
-        <?php echo $secondBtnResponse; ?>
+        <?php echo $secondMessageToUser; ?>
     </form>
 </div>
 </body>

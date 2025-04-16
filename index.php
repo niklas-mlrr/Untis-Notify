@@ -50,7 +50,7 @@ if ($username && $password) {
             } else {
                 updateDatabase($conn, "users", ["password_cipher", "password_hash"], ["username = ?"], [$passwordCipherAndHash[0], $passwordCipherAndHash[1], $username], $username);
             }
-            Logger::log("User $username was added to the database");
+            Logger::log("User $username was added to the database or their password changed");
         }
 
 
@@ -70,14 +70,13 @@ if ($username && $password) {
         if (str_contains($e->getMessage(), 'bad credentials')) {
             $loginMessage = getMessageText("loginFailedBadCredentials");
         }
-
     }
 
 
 } else {
-    $btnResponse = $_GET['btnResponse'] ?? null;
-    if($btnResponse) {
-        $loginMessage = getMessageText($btnResponse);
+    $messageToUser = $_GET['messageToUser'] ?? null;
+    if($messageToUser) {
+        $loginMessage = getMessageText($messageToUser);
     } else {
         $loginMessage = "";
     }
@@ -86,7 +85,7 @@ if ($username && $password) {
 
 
 <div class="img-div">
-    <img class="notification-img" src="notification example.png" alt="Notification Example">
+    <img class="notification-img" src="notification example.PNG" alt="Notification Example">
 </div>
 <br><br>
 <p class="notification-text">↑ Beispiel einer Benachrichtigung ↑</p>
@@ -101,7 +100,6 @@ if ($username && $password) {
         </button>
         <h2>Untis Notify</h2>
         <h4>- Benachrichtigungen für Untis -</h4>
-        <p class="info-text">Die Einrichtung dauert einmalig ca. 20 Min. und benötigt ein Handy & Pc / Laptop</p>
         <br>
 
         <label for="username">Untis Benutzername:</label>
