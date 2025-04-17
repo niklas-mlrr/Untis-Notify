@@ -43,7 +43,7 @@
         <p>Kontakt:<br>
             <a class="email" href="mailto:info@untis-notify.de">info@untis-notify.de</a>
             <br><br>
-            <a class="email" href="https://github.com/TechNikFuture/Untis-Notify" target="_blank">GitHub Repository</a>
+            <a class="email" href="https://github.com/niklas-mlrr/Untis-Notify" target="_blank">GitHub Repository</a>
         </p>
         </form>
     </div>

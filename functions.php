@@ -235,8 +235,8 @@ function getEmailBody($message, $oldValue, $miscellaneous): string {
             <div class="header">Wenn du das hier liest, hast du alles richtig gemacht!' . $previewStopper . '</div>
             <div class="content">
                 <p>Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Untis Stundenplan gibt. Alle 10 Min. wird dieser überprüft.</p>
-                <p>In Einzelfällen (z.B. an Jokertagen oder bei Forder, Förder und Chor (Dinge, die nicht im "persönlichen" Stundenplan auf Untis stehen, sondern nur in dem für die gesamte Klasse)) kann es vorkommen, dass nicht alles richtig verarbeitet werden kann.</p>
-                <p>Bei Fehlern oder Fragen mir gerne schreiben.</p>
+                <p>Forder, Förder und Chor werden hierbei nicht berücksichtigt, da diese nicht im "persönlichen" Stundenplan auf Untis, sondern nur in dem für die gesamte Klasse stehen. <br>In Einzelfällen, wie z.B. an Jokertagen, kann es vorkommen, dass nicht alles richtig verarbeitet werden kann.</p>
+                <p>Bei Fehlern oder Fragen, mir gerne schreiben.</p>
             </div>
         ';
     } else {
@@ -252,7 +252,7 @@ function getEmailBody($message, $oldValue, $miscellaneous): string {
     }
 
     $emailBody .= '
-                <br><br><br><br><br><br>
+                <br><br><br><br>
             <hr>
             <div class="footer">
                 <p>Kontakt: <a href="mailto:info@untis-notify.de">info@untis-notify.de</a></p>
