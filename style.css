@@ -355,7 +355,7 @@ input[type="range"]:focus {
     display: flex;
     justify-content: center;
     align-items: center;
-    line-height: 1;
+    line-height: 1.8; /* Adjusted to push down the "?" slightly */
     font-size: 1rem;
     width: 15px;
     height: 15px;
@@ -760,5 +760,6 @@ input[type="range"]:focus {
         transform: rotate(360deg);
     }
 }
+
 
 
