@@ -352,18 +352,22 @@ input[type="range"]:focus {
 }
 
 .info-icon {
-    display: inline-block;
-    width: 25px;
-    height: 25px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    line-height: 1;
+    font-size: 1rem;
+    width: 15px;
+    height: 15px;
     background-color: var(--info-icon-background-color);
     color: var(--info-icon-text-color);
     text-align: center;
     border-radius: 50%;
     cursor: pointer;
     margin-top: 1px;
-    margin-left: 10px;
+    margin-left: 8px;
     margin-bottom: 10px;
-    padding-top: 6px;
+    padding: 8px;
     border: var(--info-icon-text-color) 1px solid;
     font-weight: bold;
 }
@@ -518,7 +522,7 @@ input[type="range"]:focus {
 
 .password-toggle {
     position: absolute;
-    right: 44px;
+    right: 50px;
     top: 10px;
     cursor: pointer;
     color: var(--text-color);
@@ -756,4 +760,5 @@ input[type="range"]:focus {
         transform: rotate(360deg);
     }
 }
+
 
