@@ -236,6 +236,7 @@ function getEmailBody($message, $oldValue, $miscellaneous): string {
             <div class="content">
                 <p>Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Untis Stundenplan gibt. Alle 10 Min. wird dieser überprüft.</p>
                 <p>Forder, Förder und Chor werden hierbei nicht berücksichtigt, da diese nicht im "persönlichen" Stundenplan auf Untis, sondern nur in dem für die gesamte Klasse stehen. <br>In Einzelfällen, wie z.B. an Jokertagen, kann es vorkommen, dass nicht alles richtig verarbeitet werden kann.</p>
+                <p>Es kann sein, dass die Emails (auch erst nach ein paar Wochen, in denen es funktioniert hat), vom Email-Programm als Spam erkannt werden. <br><br>In diesem Fall muss eine Email einmalig im Spam-Ordner als "Nicht Spam" markiert werden. Um dieses Problem vorzubeugen, kann auch diese Test-Email schon als "Wichtig" oder "Kein Spam" markiert werden (z.B. Gmail: [Drei-Punkte-Menü] -> [Als wichtig markieren]).</p><br>
                 <p>Bei Fehlern oder Fragen, mir gerne schreiben.</p>
             </div>
         ';
