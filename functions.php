@@ -595,7 +595,7 @@ function getFormatedTimetable(array $timetable, string $replacements): array {
             "subject" => $timetable[$i]["su"][0]["longname"] ?? (($timetable[$i]["code"] == "irregular") ? "Veranstaltung" : "notSet"),
             "teacher" => $timetable[$i]["te"][0]["name"] ?? "notSet",
             "room" => $timetable[$i]["ro"][0]["name"] ?? "notSet",
-            "notesForStundets" => $timetable[$i]["info"] ?? "notSet",
+            "notesforStudents" => $timetable[$i]["info"] ?? "notSet",
             "substituteText" => $timetable[$i]["substText"] ?? "notSet",
         ];
 
@@ -900,7 +900,12 @@ function findCanceledItems($array1, $array2): array {
             foreach ($item as $subKey => $value) {
                 if ($subKey == "code" && $matchingItem[$subKey] == "cancelled" && $value != "cancelled") {
 
-                    $itemToUseForText = $array2[$item['lessonNum']] ?? "";
+                    // This is the way it was before
+                    //$itemToUseForText = $array2[$item['lessonNum']] ?? "";
+                    $itemToUseForText = $item2;
+
+
+
 
                     $differences[] = createDifference("Ausfall", "{$item['lessonNum']}. Stunde {$item['subject']}", "ausfall", "", decideWhatTextToUse($itemToUseForText));
                     $canceledLessons[] = $item['lessonNum'];
@@ -1003,6 +1008,7 @@ function handleDifference($subKey, $value, $newValue, $item, &$fachwechselLesson
         // If "code" previously was ..., then ...
         "code" => match ($value) {
             "cancelled" => createDifference("Jetzt kein Ausfall mehr", "$lessonNum. Stunde $subject", "ausfall"),
+            // Kommt höchstwahrscheinlich nie vor, da der Fall "Ausfall" bereits vorher separate abgefangen wird
             "" => createDifference("Ausfall", "$lessonNum. Stunde $subject", "ausfall", "", decideWhatTextToUse($itemToUseForText)),
             default => null,
         },
@@ -1018,11 +1024,12 @@ function decideWhatTextToUse($item): string {
         return "";
     }
 
-    $notesforStudents = $item['notesForStundets'];
+    $notesforStudents = $item['notesforStudents'];
     $substituteText = $item['substituteText'];
 
+
     if($notesforStudents != "notSet" && $substituteText != "notSet") {
-        return "Notizen für Schüler: <br>$notesforStudents <br><br>Vertungstext: <br>$substituteText";
+        return "Vertretungstext: <br>$substituteText <br><br>Notizen für Schüler: <br>$notesforStudents";
     } elseif ($notesforStudents != "notSet") {
         return "Notizen für Schüler: <br>$notesforStudents";
     } elseif ($substituteText != "notSet") {
