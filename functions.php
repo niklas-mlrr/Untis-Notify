@@ -235,7 +235,7 @@ function getEmailBody($message, $oldValue, $miscellaneous): string {
             <div class="header">Wenn du das hier liest, hast du alles richtig gemacht!' . $previewStopper . '</div>
             <div class="content">
                 <p>Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Untis Stundenplan gibt. Alle 10 Min. wird dieser überprüft.</p>
-                <p>Forder, Förder und Chor werden hierbei nicht berücksichtigt, da diese nicht im "persönlichen" Stundenplan auf Untis, sondern nur in dem für die gesamte Klasse stehen. <br>In Einzelfällen, wie z.B. an Jokertagen, kann es vorkommen, dass nicht alles richtig verarbeitet werden kann.</p>
+                <p>Forder, Förder und Chor werden hierbei nicht berücksichtigt, da diese auf Untis nicht im "persönlichen" Stundenplan, sondern nur in dem für die gesamte Klasse stehen. <br>In Einzelfällen, wie z.B. an Jokertagen, kann es vorkommen, dass nicht alles richtig verarbeitet werden kann.</p>
                 <p>Es kann sein, dass die Emails (auch erst nach ein paar Wochen, in denen es funktioniert hat), vom Email-Programm als Spam erkannt werden. <br><br>In diesem Fall muss eine Email einmalig im Spam-Ordner als "Nicht Spam" markiert werden. Um dieses Problem vorzubeugen, kann auch diese Test-Email schon als "Wichtig" oder "Kein Spam" markiert werden (z.B. Gmail: [Drei-Punkte-Menü] -> [Als wichtig markieren]).</p><br>
                 <p>Bei Fehlern oder Fragen, mir gerne schreiben.</p>
             </div>
@@ -696,7 +696,7 @@ function removeCancelledLessonsWhileIrregular(array $timeTable): array {
  * @param array $array2 Current timetable array
  * @return array Array containing irregular lesson details [startLessonNum, endLessonNum, endTime, differences]
  */
-function findIrregularLessons(array $array2, $timetable): array {
+function findIrregularLessons(array $array1, array $array2, $timetable): array {
     global $startTimes;
     global $endTimes;
     
@@ -708,7 +708,7 @@ function findIrregularLessons(array $array2, $timetable): array {
 
     // Find if there's an irregular lesson and get its end time
     foreach ($array2 as $item) {
-        if (isset($item['code']) && $item['code'] == "irregular") {
+        if (isset($item['code']) && $item['code'] == "irregular" && (!isset($array1[$item['lessonNum']]['code']) || $array1[$item['lessonNum']]['code'] != "irregular")) {
             $irregularStartLessonNum = $item['lessonNum'];
 
             $irregularEndTime = $item['endTime'];
@@ -764,7 +764,7 @@ function compareArrays(array $array1, array $array2, $date, $timetable): array {
     $fachwechselLessons = [];
 
     // Find irregular lessons
-    $irregularInfo = findIrregularLessons($array2, $timetable);
+    $irregularInfo = findIrregularLessons($array1, $array2, $timetable);
     $irregularDifferencs = $irregularInfo['differences'];
     $irregularStartLessonNum = $irregularInfo['startLessonNum'];
     $irregularEndTime = $irregularInfo['endTime'];
@@ -885,7 +885,7 @@ function findCanceledItems($array1, $array2): array {
     $canceledLessons = [];
 
     foreach ($array1 as $key => $item) {
-        // Find corresponding item in array2 by lessonNum instead of using array index
+        // Find the corresponding item in array2 by lessonNum instead of using array index
         $matchingItem = null;
         foreach ($array2 as $item2) {
             if (isset($item['lessonNum']) && isset($item2['lessonNum']) && $item['lessonNum'] == $item2['lessonNum']) {
@@ -895,17 +895,12 @@ function findCanceledItems($array1, $array2): array {
         }
 
         if ($matchingItem) {
-
-
             foreach ($item as $subKey => $value) {
                 if ($subKey == "code" && $matchingItem[$subKey] == "cancelled" && $value != "cancelled") {
 
                     // This is the way it was before
                     //$itemToUseForText = $array2[$item['lessonNum']] ?? "";
                     $itemToUseForText = $item2;
-
-
-
 
                     $differences[] = createDifference("Ausfall", "{$item['lessonNum']}. Stunde {$item['subject']}", "ausfall", "", decideWhatTextToUse($itemToUseForText));
                     $canceledLessons[] = $item['lessonNum'];
