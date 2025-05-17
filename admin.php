@@ -146,7 +146,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <label for="forDate">For Date:</label>
         <div class="label-container">
-            <input type="date" id="forDateInput" class="for-date-input" name="forDate"">
+            <input type="date" id="forDateInput" class="date-input" name="forDate"">
         </div>
         <br>
 

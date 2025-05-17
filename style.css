@@ -103,6 +103,39 @@ label {
     box-sizing: border-box; /* Stellt sicher, dass die Padding nicht die Breite beeinflusst */
 }
 
+.notion-formula-input-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center children horizontally */
+    justify-content: center;
+    margin: 10px 0; /* Top and bottom margin only */
+    padding: 0; /* Reset padding */
+    gap: 10px;
+    width: 100%; /* Take full width of parent */
+    box-sizing: border-box;
+    text-align: center; /* Ensure text alignment is centered */
+}
+
+/* Remove the width:100% from the date-input class if it's causing issues,
+   and apply it through the container instead */
+.notion-formula-input-container .date-input {
+    width: 100%;
+    box-sizing: border-box; /* Include padding in width calculation */
+    margin-bottom: 0; /* Override the default margin-bottom if needed */
+}
+
+.notion-formula-input-container .btn {
+    width: 100%;
+    box-sizing: border-box; /* Include padding in width calculation */
+    margin-bottom: 0; /* Override the default margin-bottom if needed */
+}
+
+
+.notion-formula-input-container input,
+.notion-formula-input-container button {
+    width: 100%; /* Make both elements take full width of container */
+    margin-bottom: 10px; /* Add space between elements */
+}
 
 
 input[type="text"],
@@ -328,6 +361,10 @@ input[type="range"]:focus {
 .admin-panel-btn {
     color: var(--text-color);
     background-color: var(--btn-admin-panel-background-color);
+    width: 100%;
+}
+
+.notion-formula-btn {
     width: 100%;
 }
 
@@ -570,7 +607,7 @@ input[type="range"]:focus {
     border-color: var(--button-background-color);
 }
 
-.for-date-input {
+.date-input {
     width: 100%;
     padding: 10px;
     margin-bottom: 10px;
@@ -583,22 +620,20 @@ input[type="range"]:focus {
     position: relative;
 }
 
-.for-date-input::-webkit-calendar-picker-indicator {
+.date-input::-webkit-calendar-picker-indicator {
     filter: var(--calendar-icon-filter);
     cursor: pointer;
 }
 
-.for-date-input::-webkit-inner-spin-button,
-.for-date-input::-webkit-clear-button {
+.date-input::-webkit-inner-spin-button,
+.date-input::-webkit-clear-button {
     display: none;
 }
 
-.for-date-input:focus {
+.date-input:focus {
     outline: none;
     border-color: var(--button-background-color);
 }
-
-
 
 
 
@@ -763,3 +798,16 @@ input[type="range"]:focus {
 
 
 
+.left-aligned {
+    text-align: left;
+    display: inline-block;
+}
+
+.important-text {
+    color: var(--info-icon-text-color);
+    font-weight: bold;
+    margin-bottom: 10px;
+    padding: 7px;
+    border: var(--info-icon-text-color) 2px dashed;
+    border-radius: 8px;
+}

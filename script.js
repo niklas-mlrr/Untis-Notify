@@ -91,6 +91,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = 'login';
             } else if (window.location.href.includes("admin")) {
                 window.location.href = 'settings';
+            } else if (window.location.href.includes("notionFormula")) {
+                window.location.href = 'settings';
             }
         });
     }
@@ -143,4 +145,18 @@ function hideLoadingAnimation() {
 
 function scrollToBottom() {
     document.getElementById('parent').scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function copyNotionFormula() {
+    const formula = document.getElementById('notionFormula').innerText;
+    if(formula.includes("kein Montag")) {
+        return;
+    }
+    navigator.clipboard.writeText(formula).then(() => {
+        alert("Formel in die Zwischenablage kopiert");
+    }).catch(err => {
+        console.error('Error copying text: ', err);
+    });
+
+
 }

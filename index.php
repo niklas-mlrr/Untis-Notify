@@ -50,7 +50,7 @@ if ($username && $password) {
             } else {
                 updateDatabase($conn, "users", ["password_cipher", "password_hash"], ["username = ?"], [$passwordCipherAndHash[0], $passwordCipherAndHash[1], $username], $username);
             }
-            Logger::log("User $username was added to the database or their password changed");
+            Logger::log("Added to the database or their password changed", $username);
         }
 
 

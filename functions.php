@@ -1452,3 +1452,82 @@ function checkIfURLExists($url): bool {
 function redirectToSettingsPage($urlParameterMessage): void {
     header("Location: settings?messageToUser=$urlParameterMessage");
 }
+
+
+
+
+
+/**
+ * @param string $startOfWeek
+ * @param string $login
+ * @param string $userId
+ * @param string $username
+ * @param string|null $replacements
+ * @return array|array[]
+ * @throws Exception
+ */
+function getTimetableWeek(string $startOfWeek, string $login, string $userId, string $username, ?string $replacements): array {
+    $timetableWeek = [];
+    for ($i = 0; $i <= 4; $i++) {
+        $dayToCheck = date('Ymd', strtotime($startOfWeek . " +$i day"));
+
+        $timetable = getTimetable($login, $userId, $dayToCheck, $username);
+        $formatedTimetable = getFormatedTimetable($timetable, $replacements);
+
+
+        for ($k = 0; $k < count($formatedTimetable); $k++) {
+            $timetableWeek[$i + 1][$k] = $formatedTimetable[$k]["subject"];     // "$i + 1" because the first day should be 1, not 0
+        }
+    }
+    return array_map(function ($day) {
+        return array_values(array_unique($day));
+    }, $timetableWeek);
+}
+
+
+/**
+ * @param array $timetableWeek
+ * @return array
+ */
+function getSubjectsThatAppearMultipleTimes(array $timetableWeek): array {
+    $subjectsThatAppearMultipleTimes = [];
+    foreach ($timetableWeek as $day => $subjects) {
+        foreach ($subjects as $subject) {
+            if (isset($subjectsThatAppearMultipleTimes[$subject])) {
+                $subjectsThatAppearMultipleTimes[$subject][] = $day;
+            } else {
+                $subjectsThatAppearMultipleTimes[$subject] = [$day];
+            }
+        }
+    }
+
+    // Filter out subjects that appear only once
+    $subjectsThatAppearMultipleTimes = array_filter($subjectsThatAppearMultipleTimes, function ($days) {
+        return count($days) > 1;
+    });
+    return array($subjectsThatAppearMultipleTimes, $day, $subject);
+}
+
+
+/**
+ * @param mixed $subjectsThatAppearMultipleTimes
+ * @return string
+ */
+function getNotionFormula(mixed $subjectsThatAppearMultipleTimes): string {
+    $notionFormula = "if(contains(prop(\"Fach\"), \"14-tägig\"), \"14\", \n";
+    $nOfClosingBrackets = 1;
+    foreach ($subjectsThatAppearMultipleTimes as $subject => $days) {
+        foreach ($days as $day) {
+
+            $daysBetweenNextInsanceOfSubject = isset($days[array_search($day, $days) + 1])
+                ? $days[array_search($day, $days) + 1] - $day
+                : $days[0] + (7 - $day);
+
+            $notionFormula .= "if(contains(prop(\"Fach\"), \"$subject\") and day(prop(\"Created\"))==$day, \"$daysBetweenNextInsanceOfSubject\",\n";
+            $nOfClosingBrackets++;
+        }
+    }
+    $closingBrackets = str_repeat(")", $nOfClosingBrackets);
+    $notionFormula .= "\"7\"$closingBrackets";
+    return $notionFormula;
+}
