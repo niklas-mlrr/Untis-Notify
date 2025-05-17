@@ -106,14 +106,33 @@ label {
 .notion-formula-input-container {
     display: flex;
     flex-direction: column;
-    align-items: center; /* Center children horizontally */
+    align-items: center;
     justify-content: center;
-    margin: 10px 0;
+    margin: 10px auto;
     padding: 0;
     gap: 10px;
     width: 100%;
+    max-width: 100%;
     box-sizing: border-box;
     text-align: center;
+}
+
+.notion-formula-input-container input[type="date"].date-input {
+    width: 100% !important; /* Force width with !important for Webkit*/
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 auto !important; /* Center horizontally */
+    -webkit-appearance: none; /* Reset default iOS styling */
+    appearance: none; /* Reset default styling */
+    padding: 10px;
+}
+
+
+.notion-formula-input-container button.btn {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 auto !important;
 }
 
 .notion-formula-input-container .date-input {
