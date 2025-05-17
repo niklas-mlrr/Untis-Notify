@@ -106,7 +106,7 @@ try {
         </ol>
         <br><br>
 
-        <h4>Wähle zunächst eine Woche im aktuellen Halbjahr, in welcher keine Veranstalltung stattfindet. <br> Wähle hier das Datum des Montags dieser Woche:</h4>
+        <h4>Wähle zunächst eine Woche im aktuellen Halbjahr, in welcher es keine Veranstalltungen und keine Feiertage gibt. <br> Wähle hier das Datum des Montags dieser Woche:</h4>
         <div class="notion-formula-input-container">
             <input type="date" id="startOfWeek" name="startOfWeek" class="date-input">
             <button type="submit" class="btn-save-settings btn">Notion Formel berechnen</button>

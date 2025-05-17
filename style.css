@@ -99,8 +99,8 @@ label {
 
 .label-container input {
     flex: 1;
-    padding-right: 10px; /* Platz für das Icon */
-    box-sizing: border-box; /* Stellt sicher, dass die Padding nicht die Breite beeinflusst */
+    padding-right: 10px;
+    box-sizing: border-box;
 }
 
 .notion-formula-input-container {
@@ -108,33 +108,31 @@ label {
     flex-direction: column;
     align-items: center; /* Center children horizontally */
     justify-content: center;
-    margin: 10px 0; /* Top and bottom margin only */
-    padding: 0; /* Reset padding */
+    margin: 10px 0;
+    padding: 0;
     gap: 10px;
-    width: 100%; /* Take full width of parent */
+    width: 100%;
     box-sizing: border-box;
-    text-align: center; /* Ensure text alignment is centered */
+    text-align: center;
 }
 
-/* Remove the width:100% from the date-input class if it's causing issues,
-   and apply it through the container instead */
 .notion-formula-input-container .date-input {
     width: 100%;
-    box-sizing: border-box; /* Include padding in width calculation */
-    margin-bottom: 0; /* Override the default margin-bottom if needed */
+    box-sizing: border-box;
+    margin-bottom: 0;
 }
 
 .notion-formula-input-container .btn {
     width: 100%;
-    box-sizing: border-box; /* Include padding in width calculation */
-    margin-bottom: 0; /* Override the default margin-bottom if needed */
+    box-sizing: border-box;
+    margin-bottom: 0;
 }
 
 
 .notion-formula-input-container input,
 .notion-formula-input-container button {
-    width: 100%; /* Make both elements take full width of container */
-    margin-bottom: 10px; /* Add space between elements */
+    width: 100%;
+    margin-bottom: 10px;
 }
 
 
