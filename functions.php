@@ -78,7 +78,11 @@ function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $logi
     try {
         $timetable = getTimetable($login, $userId, $date, $username);
         $replacements = getValueFromDatabase($conn, "users", "dictionary", ["username" => $username], $username);
-        $formatedTimetable = getFormatedTimetable($timetable, $replacements);
+
+        $timegrid = getTimegrid($login, $username);
+        $formatedTimegrid = getFormatedTimegrid($timegrid);
+
+        $formatedTimetable = getFormatedTimetable($timetable, $replacements, $formatedTimegrid);
         $lastRetrieval = getValueFromDatabase($conn, "timetables", "timetable_data", ["for_date" => $date, "user" => $username], $username);
 
         $lastRetrieval = $lastRetrieval ? json_decode($lastRetrieval, true) : null;
@@ -89,6 +93,9 @@ function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $logi
             }
             return [];
         }
+
+
+        $compResult = compareArrays($lastRetrieval, $formatedTimetable, $date, $timetable, $formatedTimegrid);
 
     } catch (DatabaseException) {
         return [];
@@ -102,8 +109,6 @@ function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $logi
         }
     }
 
-
-    $compResult = compareArrays($lastRetrieval, $formatedTimetable, $date, $timetable);
 
     if ($compResult != null) {
         try {
@@ -473,31 +478,63 @@ function getStudentIdByName(array $studentArray, string $name): string {
 }
 
 
-$startTimes = [
-    "745" => 1,
-    "835" => 2,
-    "940" => 3,
-    "1025" => 4,
-    "1130" => 5,
-    "1215" => 6,
-    "1330" => 7,
-    "1415" => 8,
-    "1510" => 9,
-    "1555" => 10
-];
 
-$endTimes = [
-    "830" => 1,
-    "920" => 2,
-    "1025" => 3,
-    "1110" => 4,
-    "1215" => 5,
-    "1300" => 6,
-    "1415" => 7,
-    "1500" => 8,
-    "1555" => 9,
-    "1645" => 10
-];
+
+
+/**
+ * @param string $sessionId
+ * @param string $username
+ * @return array
+ * @throws APIException
+ */
+function getTimegrid(string $sessionId, string $username): array {
+    $payload = [
+        "id" => "fetchTimegridUnits_ts_example_" . time() . "_" . rand(),
+        "method" => "getTimegridUnits",
+        "params" => new stdClass(),     // Stellt sicher, dass 'params' als leeres Objekt {} gesendet wird
+        "jsonrpc" => "2.0"
+    ];
+
+
+    try {
+        return sendApiRequest($sessionId, $payload, $username);
+    } catch (APIException $e) {
+        throw new APIException("Failed to fetch school timegrid: " . $e->getMessage());
+    }
+}
+
+
+
+function getFormatedTimegrid($schoolTimegrid): array {
+    $startTimes = [];
+    $endTimes = [];
+
+    if (empty($schoolTimegrid) || !isset($schoolTimegrid[0]['timeUnits']) || !is_array($schoolTimegrid[0]['timeUnits'])) {
+        // Return empty arrays if the input is not as expected or no time units are found
+        return ['startTimes' => $startTimes, 'endTimes' => $endTimes];
+    }
+
+    // Assuming the time units are consistent across all days,
+    // we can use the time units from the first day.
+    $timeUnits = $schoolTimegrid[0]['timeUnits'];
+
+    foreach ($timeUnits as $unit) {
+        if (isset($unit['startTime'], $unit['name'])) {
+            // Ensure startTime is a string key and name is an integer value
+            $startTimes[(string)$unit['startTime']] = (int)$unit['name'];
+        }
+        if (isset($unit['endTime'], $unit['name'])) {
+            // Ensure endTime is a string key and name is an integer value
+            $endTimes[(string)$unit['endTime']] = (int)$unit['name'];
+        }
+    }
+
+    return ['startTimes' => $startTimes, 'endTimes' => $endTimes];
+}
+
+
+
+
 
 
 function cmp($a, $b) {
@@ -574,10 +611,11 @@ function replaceSubjectWords(string $subject, string $replacements): string {
 /**
  * @param array $timetable
  * @param string $replacements
+ * @param array $formatedTimegrid
  * @return array
  */
-function getFormatedTimetable(array $timetable, string $replacements): array {
-    global $startTimes;
+function getFormatedTimetable(array $timetable, string $replacements, array $formatedTimegrid): array {
+
     $timetable = removeDuplicateLessons($timetable);
     $timetable = removeCancelledLessonsWhileIrregular($timetable);
 
@@ -585,7 +623,7 @@ function getFormatedTimetable(array $timetable, string $replacements): array {
     $formatedTimetable = [];
 
     for ($i = 0; $i < $numOfLessons; $i++) {
-        $lessonNum = $startTimes[$timetable[$i]["startTime"]] ?? "notSet";
+        $lessonNum = $formatedTimegrid["startTimes"][$timetable[$i]["startTime"]] ?? "notSet";
 
 
         $lesson = [
@@ -696,9 +734,9 @@ function removeCancelledLessonsWhileIrregular(array $timeTable): array {
  * @param array $array2 Current timetable array
  * @return array Array containing irregular lesson details [startLessonNum, endLessonNum, endTime, differences]
  */
-function findIrregularLessons(array $array1, array $array2, $timetable): array {
-    global $startTimes;
-    global $endTimes;
+function findIrregularLessons(array $array1, array $array2, $timetable, $formatedTimegrid): array {
+
+
     
     $irregularDifferences = [];
     $irregularStartLessonNum = "";
@@ -714,7 +752,7 @@ function findIrregularLessons(array $array1, array $array2, $timetable): array {
             $irregularEndTime = $item['endTime'];
 
             foreach ($timetable as $lesson) {
-            if ($startTimes[$lesson["startTime"]] == $irregularStartLessonNum && $lesson["code"] == "irregular" && !empty($lesson["lstext"])) {
+            if ($formatedTimegrid["startTimes"][$lesson["startTime"]] == $irregularStartLessonNum && $lesson["code"] == "irregular" && !empty($lesson["lstext"])) {
                 $irregularLessonText = "Informationen zur Stunde: <br>" . $lesson["lstext"];
             }
 
@@ -722,7 +760,7 @@ function findIrregularLessons(array $array1, array $array2, $timetable): array {
 
             // Insert ":" as a seperator from the hour and minutes
             $irregularEndLessonNum = strrev($irregularEndTime);
-            $irregularEndLessonNum = $endTimes[$irregularEndTime] ?? substr($irregularEndLessonNum, 0, 2) . ":" . substr($irregularEndLessonNum, 2);
+            $irregularEndLessonNum = $formatedTimegrid["endTimes"][$irregularEndTime] ?? substr($irregularEndLessonNum, 0, 2) . ":" . substr($irregularEndLessonNum, 2);
             $irregularEndLessonNum = strrev($irregularEndLessonNum);
 
 
@@ -750,13 +788,14 @@ function findIrregularLessons(array $array1, array $array2, $timetable): array {
 }
 
 /**
- * @param $array1 (= lastRetrieval)
- * @param $array2 (= formatedTimetable)
+ * @param array $array1 (= lastRetrieval)
+ * @param array $array2 (= formatedTimetable)
  * @param $date
  * @param $timetable
+ * @param $formatedTimegrid
  * @return array
  */
-function compareArrays(array $array1, array $array2, $date, $timetable): array {
+function compareArrays(array $array1, array $array2, $date, $timetable, $formatedTimegrid): array {
 
 
 
@@ -764,7 +803,7 @@ function compareArrays(array $array1, array $array2, $date, $timetable): array {
     $fachwechselLessons = [];
 
     // Find irregular lessons
-    $irregularInfo = findIrregularLessons($array1, $array2, $timetable);
+    $irregularInfo = findIrregularLessons($array1, $array2, $timetable, $formatedTimegrid);
     $irregularDifferencs = $irregularInfo['differences'];
     $irregularStartLessonNum = $irregularInfo['startLessonNum'];
     $irregularEndTime = $irregularInfo['endTime'];
@@ -1097,7 +1136,7 @@ function sendEmails($differences, $username, $conn): void {
         Logger::log("Zu viele Benachrichtigungen ($differencesCount): $differences", $username);
         $differences = [];
         $differences[] = createDifference("Das System wollte gerade $differencesCount Benachrichtigungen zu dir senden. Durch einen Sicherheitsmechanismus wurden diese abgefangen. Bitte wende dich an den Admin um zu erfahren, warum dir so viele Benachrichtigungen gesendet werden sollten.", "Zu viele Benachrichtigungen", "ausfall");
-        $differences[0]['date'] = date("Ymd"); // Add date for this special case
+        $differences[0]['date'] = date("Ymd"); // Adding date for this special case
     }
 
     foreach ($differences as $difference) {
@@ -1454,9 +1493,6 @@ function redirectToSettingsPage($urlParameterMessage): void {
 }
 
 
-
-
-
 /**
  * @param string $startOfWeek
  * @param string $login
@@ -1464,7 +1500,7 @@ function redirectToSettingsPage($urlParameterMessage): void {
  * @param string $username
  * @param string|null $replacements
  * @return array|array[]
- * @throws Exception
+ * @throws APIException
  */
 function getTimetableWeek(string $startOfWeek, string $login, string $userId, string $username, ?string $replacements): array {
     $timetableWeek = [];
@@ -1472,7 +1508,9 @@ function getTimetableWeek(string $startOfWeek, string $login, string $userId, st
         $dayToCheck = date('Ymd', strtotime($startOfWeek . " +$i day"));
 
         $timetable = getTimetable($login, $userId, $dayToCheck, $username);
-        $formatedTimetable = getFormatedTimetable($timetable, $replacements);
+        $timegrid = getTimegrid($login, $username);
+        $formatedTimegrid = getFormatedTimegrid($timegrid);
+        $formatedTimetable = getFormatedTimetable($timetable, $replacements, $formatedTimegrid);
 
 
         for ($k = 0; $k < count($formatedTimetable); $k++) {
