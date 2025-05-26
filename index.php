@@ -32,21 +32,29 @@ $username = $_POST['username'] ?? null;
 $password = $_POST['password'] ?? null;
 
 
+$schoolNameFromGet = isset($_GET['schoolName']) ? htmlspecialchars($_GET['schoolName']) : null;
+
 if ($username && $password) {
     $username = trim($username);
     $password = trim($password);
 
+
+
+    $submittedSchoolName = isset($_POST['schoolName']) && $_POST['schoolName'] !== '' ? trim($_POST['schoolName']) : null;
+
+
     try {
         $conn = connectToDatabase();
         $pwLoggingMode = getValueFromDatabase($conn, "settings", "pw_logging_mode", ["id" => 1], "Admin");
-        $sessionId = loginToWebUntis($username, $password, $pwLoggingMode);
+        $submittedSchoolName = $submittedSchoolName ?? getValueFromDatabase($conn, "users", "school_name", ["username" => $username], $username) ?? "gym-osterode";
+        $sessionId = loginToWebUntis($username, $password, $pwLoggingMode, $submittedSchoolName);
 
 
         $isUserInDatabaseAndAuthenticated = authenticateEncryptedPassword($conn, $username, $password);
         if (!$isUserInDatabaseAndAuthenticated) {
             $passwordCipherAndHash = encryptAndHashPassword($password);
             if (empty(getRowsFromDatabase($conn, "users", ["username" => $username], $username))) {
-                insertIntoDatabase($conn, "users", ["username", "password_cipher", "password_hash"], [$username, $passwordCipherAndHash[0], $passwordCipherAndHash[1]], $username);
+                insertIntoDatabase($conn, "users", ["username", "password_cipher", "password_hash", "school_name"], [$username, $passwordCipherAndHash[0], $passwordCipherAndHash[1], $submittedSchoolName], $username);
             } else {
                 updateDatabase($conn, "users", ["password_cipher", "password_hash"], ["username = ?"], [$passwordCipherAndHash[0], $passwordCipherAndHash[1], $username], $username);
             }
@@ -95,6 +103,8 @@ if ($username && $password) {
     <span class="loader" id="loading-animation" ></span>
 
     <form action="login" method="post">
+        <input type="hidden" name="schoolName" value="<?php echo $schoolNameFromGet; ?>">
+
         <button id="toggle-theme" class="dark-mode-switch-btn" type="button">
             <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
         </button>
@@ -129,3 +139,4 @@ if ($username && $password) {
 </body>
 <script src="script.js"></script>
 </html>
+

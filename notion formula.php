@@ -19,8 +19,9 @@ try {
     $differences = [];
     $conn = connectToDatabase();
 
+    $schoolName = getValueFromDatabase($conn, "users", "school_name", ["username" => $username], $username);
 
-    $login = loginToWebUntis($username, $password, "");
+    $login = loginToWebUntis($username, $password, "", $schoolName);
     $students = getStudents($login, $username);
     $userId = getStudentIdByName($students, $username);
 

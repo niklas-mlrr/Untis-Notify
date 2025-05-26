@@ -1,19 +1,18 @@
 -- Users table
 CREATE TABLE `users` (
-    `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `username` VARCHAR(20) COLLATE utf8mb4_general_ci NOT NULL,
-    `password_cipher` VARCHAR(255) COLLATE utf8mb4_general_ci NOT NULL,
-    `password_hash` VARCHAR(255) COLLATE utf8mb4_general_ci NOT NULL,
-    `email_adress` VARCHAR(70) COLLATE utf8mb4_general_ci DEFAULT NULL,
-    `setup_complete` TINYINT(1) DEFAULT '0',
-    `notification_for_days_in_advance` INT DEFAULT '10',
-    `receive_notifications_for` VARCHAR(70) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'ausfall, vertretung, raumänderung, sonstiges',
-    `last_login` DATETIME DEFAULT NULL,
-    `created` DATETIME DEFAULT CURRENT_TIMESTAMP,
-    `dictionary` VARCHAR(300) COLLATE utf8mb4_general_ci DEFAULT NULL,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    `id` int(10) UNSIGNED NOT NULL,
+    `username` varchar(20) NOT NULL,
+    `password_cipher` varchar(255) NOT NULL,
+    `password_hash` varchar(255) NOT NULL,
+    `email_adress` varchar(70) DEFAULT NULL,
+    `setup_complete` tinyint(1) DEFAULT 0,
+    `notification_for_days_in_advance` int(11) DEFAULT 10,
+    `receive_notifications_for` varchar(70) NOT NULL DEFAULT 'ausfall, vertretung, raumänderung, sonstiges',
+    `last_login` datetime DEFAULT NULL,
+    `created` datetime DEFAULT current_timestamp(),
+    `dictionary` varchar(300) DEFAULT NULL,
+    `school_name` varchar(30) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Timetables table
 CREATE TABLE `timetables` (

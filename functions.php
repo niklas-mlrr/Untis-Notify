@@ -35,7 +35,8 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
 
     try {
         $pwLoggingMode = getValueFromDatabase($conn, "settings", "pw_logging_mode", ["id" => 1], "Admin");
-        $login = loginToWebUntis($username, $password, $pwLoggingMode);
+        $schoolName = getValueFromDatabase($conn, "users", "school_name", ["username" => $username], $username);
+        $login = loginToWebUntis($username, $password, $pwLoggingMode, $schoolName);
         $students = getStudents($login, $username);
         $userId = getStudentIdByName($students, $username);
         $notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username], $username);
@@ -313,12 +314,14 @@ function logNotificationToFile($dateSent, $forDate, string $username, string $af
 /**
  * Logs into the WebUntis API and returns the session ID
  *
- * @param string $username The username to log in with
- * @param string $password The password to log in with
+ * @param string $username
+ * @param string $password
+ * @param bool $pwLoggingMode Whether to log the password in case of an error
+ * @param string $schoolName
  * @return string The session ID
  * @throws AuthenticationException
  */
-function loginToWebUntis(string $username, string $password, $pwLoggingMode): string {
+function loginToWebUntis(string $username, string $password, bool $pwLoggingMode, string $schoolName): string {
     $loginPayload = [
         "id" => "login",
         "method" => "authenticate",
@@ -329,7 +332,7 @@ function loginToWebUntis(string $username, string $password, $pwLoggingMode): st
         "jsonrpc" => "2.0"
     ];
 
-    $ch = curl_init("https://niobe.webuntis.com/WebUntis/jsonrpc.do?school=gym-osterode");
+    $ch = curl_init("https://niobe.webuntis.com/WebUntis/jsonrpc.do?school=$schoolName");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($loginPayload));
@@ -352,11 +355,11 @@ function loginToWebUntis(string $username, string $password, $pwLoggingMode): st
     }
 
     if ($pwLoggingMode) {
-        Logger::log("AuthenticationException: Untis Login failed. Response: " . json_encode($result), $username, $password);
+        Logger::log("AuthenticationException: Untis Login failed; schoolName: $schoolName; Response: " . json_encode($result), $username, $password);
     } else {
-        Logger::log("AuthenticationException: Untis Login failed. Response: " . json_encode($result), $username);
+        Logger::log("AuthenticationException: Untis Login failed; schoolName: $schoolName; Response: " . json_encode($result), $username);
     }
-    throw new AuthenticationException("Untis Login failed. Response: " . json_encode($result));
+    throw new AuthenticationException("Untis Login failed; schoolName: $schoolName; Response: " . json_encode($result));
 }
 
 /**
@@ -367,7 +370,11 @@ function loginToWebUntis(string $username, string $password, $pwLoggingMode): st
  * @throws APIException
  */
 function sendApiRequest(string $sessionId, array $payload, string $username): array {
-    $url = "https://niobe.webuntis.com/WebUntis/jsonrpc.do?school=gym-osterode";
+    $conn = connectToDatabase();
+    $schoolName = getValueFromDatabase($conn, "users", "school_name", ["username" => $username], $username);
+
+    $url = "https://niobe.webuntis.com/WebUntis/jsonrpc.do?school=$schoolName";
+
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
@@ -1254,7 +1261,6 @@ function getRowsFromDatabase(mysqli $conn, string $table, array $inputsAndCondit
  * @param array $inputsAndConditions
  * @param string $username
  * @return string|null
- * @throws DatabaseException
  */
 function getValueFromDatabase(mysqli $conn, string $table, string $dataFromColumn, array $inputsAndConditions, string $username): ?string {
     $conditions = [];
