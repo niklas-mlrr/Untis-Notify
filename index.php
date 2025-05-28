@@ -75,6 +75,7 @@ if ($username && $password) {
 
     } catch (AuthenticationException | Exception $e) {
         $loginMessage = getMessageText("loginFailed");
+        Logger::log("Login failed: " . $e->getMessage(), $username);
         if (str_contains($e->getMessage(), 'bad credentials')) {
             $loginMessage = getMessageText("loginFailedBadCredentials");
         }

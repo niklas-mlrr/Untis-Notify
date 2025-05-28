@@ -350,6 +350,8 @@ function loginToWebUntis(string $username, string $password, bool $pwLoggingMode
     $result = json_decode($response, true);
     curl_close($ch);
 
+    // echo $result['result']['personId'];
+
     if (isset($result['result']['sessionId'])) {
         return $result['result']['sessionId'];
     }
@@ -421,7 +423,7 @@ function getTimetable(string $sessionId, int $userId, string $date, string $user
             "options" => [
                 "element" => [
                     "id" => $userId,
-                    "type" => 5 // Für Schüler, 2 für Lehrer
+                    "type" => 5 // TRG: 5 für Schüler, 2 für Lehrer; hh5868: 1 für Schüler
                 ],
                 "startDate" => $date,
                 "endDate" => $date,
@@ -680,6 +682,11 @@ function removeDuplicateLessons($timeTable): array {
 }
 
 function chooseNotCanceledLessonForDuplicateLessons(array $lesson1, array $lesson2): ?array {
+
+    if(!isset($lesson1["code"]) || !isset($lesson2["code"])) {
+        return $lesson1;
+    }
+
     // First, check if either lesson has an "irregular" code - prioritize these
     $irregular1 = ($lesson1['code'] == "irregular") ? 1 : 0;
     $irregular2 = ($lesson2['code'] == "irregular") ? 1 : 0;
@@ -753,9 +760,11 @@ function findIrregularLessons(array $array1, array $array2, $timetable, $formate
 
     // Find if there's an irregular lesson and get its end time
     foreach ($array2 as $item) {
-        if (isset($item['code']) && $item['code'] == "irregular" && (!isset($array1[$item['lessonNum']]['code']) || $array1[$item['lessonNum']]['code'] != "irregular")) {
-            $irregularStartLessonNum = $item['lessonNum'];
 
+        $positonOfItem = array_search($item, $array1);
+        if (isset($item['code']) && $item['code'] == "irregular" && (!isset($array1[$positonOfItem]['code']) || $array1[$positonOfItem]['code'] != "irregular")) {
+
+            $irregularStartLessonNum = $item['lessonNum'];
             $irregularEndTime = $item['endTime'];
 
             foreach ($timetable as $lesson) {
