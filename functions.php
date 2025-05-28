@@ -1568,7 +1568,9 @@ function getSubjectsThatAppearMultipleTimes(array $timetableWeek): array {
  */
 function getNotionFormula(mixed $subjectsThatAppearMultipleTimes): string {
     $notionFormula = "if(contains(prop(\"Fach\"), \"14-tägig\"), \"14\", \n";
-    $nOfClosingBrackets = 1;
+    $notionFormula .= "if(contains(prop(\"Fach\"), \"7-tägig\"), \"7\", \n";
+    $nOfClosingBrackets = 2;
+
     foreach ($subjectsThatAppearMultipleTimes as $subject => $days) {
         foreach ($days as $day) {
 
