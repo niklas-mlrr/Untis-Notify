@@ -134,9 +134,8 @@ function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $logi
  * @throws DatabaseException
  * @throws UserException
  */
-function sendEmail(string $username, string $affectedLessons, string $message, string $oldValue, string $miscellaneous, $date, mysqli $conn): bool {
+function sendEmail(string $username, string $affectedLessons, string $message, string $oldValue, string $miscellaneous, $date, mysqli $conn): void {
     global $config;
-
 
     try {
         $recipientEmail = getValueFromDatabase($conn, "users", "email_adress", ["username" => $username], $username);
@@ -188,15 +187,18 @@ function sendEmail(string $username, string $affectedLessons, string $message, s
 
         $mail->AltBody = "$message; Vorher: $oldValue";
 
+
+        $forDate = date("d.m.Y", strtotime($date));
+        $currentExactDate = date("d.m.Y H:i:s");
+        logNotificationToFile($currentExactDate, $forDate, $username, $affectedLessons, $message, $oldValue, $miscellaneous, $conn);
+
         $mail->send();
 
-        $date = date("d.m.Y", strtotime($date));
-        $exactDate = date("d.m.Y H:i:s");
-        logNotificationToFile($exactDate, $date, $username, $affectedLessons, $message, $oldValue, $miscellaneous);
-        return true;
     } catch (Exception) {
         Logger::log("Email could not be sent. Mailer Error: $mail->ErrorInfo", $username);
         throw new UserException("Email could not be sent. Mailer Error: $mail->ErrorInfo", 0);
+    } catch (UserException) {
+        throw new UserException("Prevented sending email", 0);
     }
 }
 
@@ -272,6 +274,53 @@ function getEmailBody($message, $oldValue, $miscellaneous): string {
 }
 
 
+/**
+ * Checks if the exact same email was already sent multiple times today.
+ * @param string $newLogEntry
+ * @param string $username
+ * @param mysqli $conn
+ * @return void
+ * @throws UserException
+ * @throws DatabaseException
+ */
+function preventRepeatedEmails(string $newLogEntry, string $username, mysqli $conn): void {
+    global $config;
+
+    $currentYear = date("Y");
+    $currentMonth = date("m");
+
+    $logDir = __DIR__ . "/Logs/$currentYear/$currentMonth";
+    $logFile = $logDir . '/' . date('Y-m-d') . '-notifications.log';
+
+    if(!file_exists($logFile)) {
+        return;
+    }
+
+
+    $previousLogContent = file_get_contents($logFile);
+    $newLogEntry = substr($newLogEntry, 22); // Cut off the date part of the log entry
+    $nOfExactSameEntries = substr_count($previousLogContent, $newLogEntry);
+
+    $nOfAdminNotificationsAboutPrevention = substr_count($previousLogContent, "Prevented sending email to $username");
+
+    $newLogEntry = substr($newLogEntry, 0, -2); // Cut off the last two characters (line break and space) to match the log format
+
+    if ($nOfExactSameEntries >= 3) {
+        if($nOfAdminNotificationsAboutPrevention <= 2) {
+            sendEmail($config['adminUsername'], "Prevented sending email", "Prevented sending email to $username because the exact same email was already send $nOfExactSameEntries times today.", "", "Log entry that would have been created if no intervention happened: <br>$newLogEntry", date("Ymd"), $conn);
+        }
+        Logger::log("Prevented sending email because the exact same email was already send $nOfExactSameEntries times today", $username);
+        throw new UserException("Prevented sending email", 0);
+    }
+}
+
+
+
+
+
+
+
+
 
 
 
@@ -287,7 +336,7 @@ function getEmailBody($message, $oldValue, $miscellaneous): string {
  * @param string $miscellaneous
  * @return void
  */
-function logNotificationToFile($dateSent, $forDate, string $username, string $affectedLessons, string $message, string $oldValue, string $miscellaneous): void {
+function logNotificationToFile($dateSent, $forDate, string $username, string $affectedLessons, string $message, string $oldValue, string $miscellaneous, $conn): void {
     $logEntry = sprintf(
         "[%s] ForDate: %s, Username: %s, AffectedLessons: %s, Message: %s, OldValue: %s, Miscellaneous: %s\n",
         $dateSent,
@@ -298,6 +347,14 @@ function logNotificationToFile($dateSent, $forDate, string $username, string $af
         $oldValue,
         $miscellaneous,
     );
+
+    try {
+        preventRepeatedEmails($logEntry, $username, $conn);
+    } catch (UserException) {
+        throw new UserException("Prevented sending email", 0);
+    }
+
+
 
     $currentYear = date("Y");
     $currentMonth = date("m");

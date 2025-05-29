@@ -139,9 +139,8 @@ if (isset($_POST['action'])) {
                 break;
             } else {
                 try {
-                    $testNotification = sendEmail($username, "Testbenachrichtigung", "Testbenachrichtigung", "", "", "", $conn);
-
-                    if ($testNotification && updateDatabase($conn, "users", ["setup_complete"], ["username = ?"], [true, $username], $username)) {
+                    sendEmail($username, "Testbenachrichtigung", "Testbenachrichtigung", "", "", "", $conn);
+                    if (updateDatabase($conn, "users", ["setup_complete"], ["username = ?"], [true, $username], $username)) {
                         Logger::log("User $username completed the setup; Testnotification send successfully");
                         redirectToSettingsPage("testNotificationSent");
                         break;
