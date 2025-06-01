@@ -11,7 +11,8 @@ CREATE TABLE `users` (
     `last_login` datetime DEFAULT NULL,
     `created` datetime DEFAULT current_timestamp(),
     `dictionary` varchar(300) DEFAULT NULL,
-    `school_name` varchar(30) NOT NULL
+    `school_name` varchar(30) NOT NULL,
+    `server_name` varchar(30) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Timetables table

@@ -21,9 +21,7 @@ try {
 
     $schoolName = getValueFromDatabase($conn, "users", "school_name", ["username" => $username], $username);
 
-    $login = loginToWebUntis($username, $password, "", $schoolName);
-    $students = getStudents($login, $username);
-    $userId = getStudentIdByName($students, $username);
+    $login = loginToWebUntis($username, $password, "", $conn);
 
     // get the startOfWeek input
     if (isset($_GET['startOfWeek'])) {
@@ -39,7 +37,7 @@ try {
             // Continue with your existing code for when it is a Monday
             $replacements = getValueFromDatabase($conn, "users", "dictionary", ["username" => $username], $username);
 
-            $timetableWeek = getTimetableWeek($startOfWeek, $login, $userId, $username, $replacements);
+            $timetableWeek = getTimetableWeek($startOfWeek, $login[0], $login[1], $username, $replacements);
             list($subjectsThatAppearMultipleTimes, $day, $subject) = getSubjectsThatAppearMultipleTimes($timetableWeek);
 
             $notionFormula = getNotionFormula($subjectsThatAppearMultipleTimes);

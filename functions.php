@@ -35,10 +35,7 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
 
     try {
         $pwLoggingMode = getValueFromDatabase($conn, "settings", "pw_logging_mode", ["id" => 1], "Admin");
-        $schoolName = getValueFromDatabase($conn, "users", "school_name", ["username" => $username], $username);
-        $login = loginToWebUntis($username, $password, $pwLoggingMode, $schoolName);
-        $students = getStudents($login, $username);
-        $userId = getStudentIdByName($students, $username);
+        $login = loginToWebUntis($username, $password, $pwLoggingMode, $conn);
         $notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username], $username);
     } catch (AuthenticationException|DatabaseException|UserException) {
         return;
@@ -59,7 +56,7 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
 
     for ($i = 0; $i < $notificationForDaysInAdvance; $i++) {
         $date = date("Ymd", strtotime("+$i days"));
-        $differences = array_merge($differences, checkCompareAndUpdateTimetable($date, $conn, $login, $userId, $username));
+        $differences = array_merge($differences, checkCompareAndUpdateTimetable($date, $conn, $login[0], $login[1], $username));
     }
 
 
@@ -243,9 +240,9 @@ function getEmailBody($message, $oldValue, $miscellaneous): string {
             <div class="header">Wenn du das hier liest, hast du alles richtig gemacht!' . $previewStopper . '</div>
             <div class="content">
                 <p>Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Untis Stundenplan gibt. Alle 10 Min. wird dieser überprüft.</p>
-                <p>Forder, Förder und Chor werden hierbei nicht berücksichtigt, da diese auf Untis nicht im "persönlichen" Stundenplan, sondern nur in dem für die gesamte Klasse stehen. <br>In Einzelfällen, wie z.B. an Jokertagen, kann es vorkommen, dass nicht alles richtig verarbeitet werden kann.</p>
-                <p>Es kann sein, dass die Emails (auch erst nach ein paar Wochen, in denen es funktioniert hat), vom Email-Programm als Spam erkannt werden. <br><br>In diesem Fall muss eine Email einmalig im Spam-Ordner als "Nicht Spam" markiert werden. Um dieses Problem vorzubeugen, kann auch diese Test-Email schon als "Wichtig" oder "Kein Spam" markiert werden (z.B. Gmail: [Drei-Punkte-Menü] → [Als wichtig markieren]).</p><br>
-                <p>Bei Fehlern oder Fragen, mir gerne schreiben.</p>
+                <p>Forder, Förder und Chor werden hierbei nicht berücksichtigt, da diese auf Untis nicht im "persönlichen" Stundenplan, sondern nur in dem für die gesamte Klasse stehen. <br>In Einzelfällen, wie z. B. an Jokertagen, kann es vorkommen, dass nicht alles richtig verarbeitet werden kann.</p>
+                <p>Es kann sein, dass die Emails (auch erst nach ein paar Wochen, in denen es funktioniert hat), vom Email-Programm als Spam erkannt werden. <br><br>In diesem Fall muss eine Email einmalig im Spam-Ordner als "Nicht Spam" markiert werden. Um dieses Problem vorzubeugen, kann auch diese Test-Email schon als "Wichtig" oder "Kein Spam" markiert werden (z. B. Gmail: [Drei-Punkte-Menü] → [Als wichtig markieren]).</p><br>
+                <p>Bei Fehlern oder Fragen mir gerne schreiben.</p>
             </div>
         ';
     } else {
@@ -374,11 +371,19 @@ function logNotificationToFile($dateSent, $forDate, string $username, string $af
  * @param string $username
  * @param string $password
  * @param bool $pwLoggingMode Whether to log the password in case of an error
+ * @param $conn
  * @param string $schoolName
- * @return string The session ID
+ * @param string $serverName
+ * @return array 1. The session ID; 2. The userId
  * @throws AuthenticationException
  */
-function loginToWebUntis(string $username, string $password, bool $pwLoggingMode, string $schoolName): string {
+function loginToWebUntis(string $username, string $password, bool $pwLoggingMode, $conn, string $schoolName = "", string $serverName = ""): array {
+    if(empty($schoolName) || empty($serverName)) {
+        $schoolName = getValueFromDatabase($conn, "users", "school_name", ["username" => $username], $username);
+        $serverName = getValueFromDatabase($conn, "users", "server_name", ["username" => $username], $username);
+    }
+
+
     $loginPayload = [
         "id" => "login",
         "method" => "authenticate",
@@ -389,7 +394,7 @@ function loginToWebUntis(string $username, string $password, bool $pwLoggingMode
         "jsonrpc" => "2.0"
     ];
 
-    $ch = curl_init("https://niobe.webuntis.com/WebUntis/jsonrpc.do?school=$schoolName");
+    $ch = curl_init("https://$serverName.webuntis.com/WebUntis/jsonrpc.do?school=$schoolName");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($loginPayload));
@@ -407,18 +412,17 @@ function loginToWebUntis(string $username, string $password, bool $pwLoggingMode
     $result = json_decode($response, true);
     curl_close($ch);
 
-    // echo $result['result']['personId'];
 
     if (isset($result['result']['sessionId'])) {
-        return $result['result']['sessionId'];
+        return [$result['result']['sessionId'], $result['result']['personId']];
     }
 
     if ($pwLoggingMode) {
-        Logger::log("AuthenticationException: Untis Login failed; schoolName: $schoolName; Response: " . json_encode($result), $username, $password);
+        Logger::log("AuthenticationException: Untis Login failed; schoolName: $schoolName; serverName: $serverName; Response: " . json_encode($result), $username, $password);
     } else {
-        Logger::log("AuthenticationException: Untis Login failed; schoolName: $schoolName; Response: " . json_encode($result), $username);
+        Logger::log("AuthenticationException: Untis Login failed; schoolName: $schoolName; serverName: $serverName; Response: " . json_encode($result), $username);
     }
-    throw new AuthenticationException("Untis Login failed; schoolName: $schoolName; Response: " . json_encode($result));
+    throw new AuthenticationException("Untis Login failed; schoolName: $schoolName; serverName: $serverName; Response: " . json_encode($result));
 }
 
 /**
@@ -431,8 +435,9 @@ function loginToWebUntis(string $username, string $password, bool $pwLoggingMode
 function sendApiRequest(string $sessionId, array $payload, string $username): array {
     $conn = connectToDatabase();
     $schoolName = getValueFromDatabase($conn, "users", "school_name", ["username" => $username], $username);
+    $serverName = getValueFromDatabase($conn, "users", "server_name", ["username" => $username], $username);
 
-    $url = "https://niobe.webuntis.com/WebUntis/jsonrpc.do?school=$schoolName";
+    $url = "https://$serverName.webuntis.com/WebUntis/jsonrpc.do?school=$schoolName";
 
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -473,6 +478,11 @@ function sendApiRequest(string $sessionId, array $payload, string $username): ar
  * @throws APIException
  */
 function getTimetable(string $sessionId, int $userId, string $date, string $username): array {
+    $conn = connectToDatabase();
+    $schoolName = getValueFromDatabase($conn, "users", "school_name", ["username" => $username], $username);
+
+    $schoolSpecificType = ($schoolName === "hh5868") ? 1 : 5; // hh5868: 1 für Schüler, TRG: 5 für Schüler, 2 für Lehrer
+
     $payload = [
         "id" => "getTimetable",
         "method" => "getTimetable",
@@ -480,7 +490,7 @@ function getTimetable(string $sessionId, int $userId, string $date, string $user
             "options" => [
                 "element" => [
                     "id" => $userId,
-                    "type" => 5 // TRG: 5 für Schüler, 2 für Lehrer; hh5868: 1 für Schüler
+                    "type" => $schoolSpecificType
                 ],
                 "startDate" => $date,
                 "endDate" => $date,
@@ -505,45 +515,6 @@ function getTimetable(string $sessionId, int $userId, string $date, string $user
         throw new APIException($e->getMessage());
     }
 }
-
-/**
- * @param string $sessionId
- * @param string $username
- * @return array
- * @throws APIException
- */
-function getStudents(string $sessionId, string $username): array {
-    $payload = [
-        "id" => "getStudents",
-        "method" => "getStudents",
-        "params" => [],
-        "jsonrpc" => "2.0"
-    ];
-    try {
-        return sendApiRequest($sessionId, $payload, $username);
-    } catch (APIException $e) {
-        throw new APIException($e->getMessage());
-    }
-}
-
-
-/**
- * @param array $studentArray
- * @param string $name
- * @return string
- * @throws UserException
- */
-function getStudentIdByName(array $studentArray, string $name): string {
-    foreach ($studentArray as $student) {
-        if ($student['name'] === $name) {
-            return $student['id'];
-        }
-    }
-    Logger::log("Student not found: $name");
-    throw new UserException("Student not found: $name");
-}
-
-
 
 
 
@@ -1115,7 +1086,7 @@ function handleDifference($subKey, $value, $newValue, $item, &$fachwechselLesson
         // If "code" previously was ..., then ...
         "code" => match ($value) {
             "cancelled" => createDifference("Jetzt kein Ausfall mehr", "$lessonNum. Stunde $subject", "ausfall"),
-            // Kommt höchstwahrscheinlich nie vor, da der Fall "Ausfall" bereits vorher separate abgefangen wird
+            // Kommt höchstwahrscheinlich nie vor, da der Fall "Ausfall" bereits vorher separat abgefangen wird
             "" => createDifference("Ausfall", "$lessonNum. Stunde $subject", "ausfall", "", decideWhatTextToUse($itemToUseForText)),
             default => null,
         },
@@ -1232,6 +1203,10 @@ function getMessageText($case): string {
         "loginFailedBadCredentials" => '<p class="failed">Fehler beim Einloggen.<br><br>
         Hier sind nicht die IServ, <br>sondern die Untis Login-Daten nötig.<br><br>
         Wenn du nicht weißt, <br>wie du diese erhalten kannst, <br>klicke auf die "?".</p>',
+        "loginFailedInvalidSchoolname" => '<p class="failed">Fehler beim Einloggen.<br><br>
+        Der eingegebene ServerName odder SchoolName konnte nicht gefunden werden</p>',
+        "loginFailedUsernameContainsNumbers" => '<p class="failed">Fehler beim Einloggen.<br><br>
+        Dein Untis Account ist ein Klassenaccount. Das Benachrichtigungssystem funktioniert leider nur, wenn man einen persönlichen Stundenplan und nicht nur einen Klassenstundenplan abrufen kann.</p>',
         "settingsSavedSuccessfully" => '<p class="successful">Einstellungen erfolgreich gespeichert</p>',
         "settingsSavedSuccessfullyAndReferToEmail" => '<p class="successful">Einstellungen erfolgreich gespeichert. <br> Du musst jedoch oben noch deine Email-Adresse angeben, zu welcher die Benachrichtigungen kommen sollen.</p>',
         "settingsSavedSuccessfullyAndHowToContinue" => '<p class="successful">Einstellungen erfolgreich gespeichert. <br> Um die Benachrichtigungen zu aktivieren, klicke auf "Testbenachrichtigungen senden".</p>',
@@ -1241,7 +1216,7 @@ function getMessageText($case): string {
         "testNotificationSent" => '<p class="successful">Testbenachrichtigungen erfolgreich gesendet. <br> Somit ist das Setup erfolgreich abgeschlossen und ab jetzt wird regelmäßig überprüft, ob es Änderungen für dich gibt.</p>',
         "testNotificationNotSent" => '<p class="failed">Fehler beim Senden der Testbenachrichtigung</p>',
         "testNotificationNotSentInvalidEmail" => '<p class="failed">Fehler beim Senden der Testbenachrichtigung. <br><br> Bitte überprüfe deine Email-Adresse, speichere und versuche es erneut.</p>',
-        "dbError" => '<p class="failed">Fehler beim Abrufen der Daten aus der Datenbank</p>',
+        "dbError" => '<p class="failed">Fehler beim Abruf der Daten aus der Datenbank</p>',
         "dbConnError" => '<p class="failed">Fehler beim Herstellen der Verbindung zur Datenbank</p>',
         "emptyFields" => '<p class="failed">Bitte fülle alle Felder aus</p>',
         "messageSentSuccessfully" => '<p class="successful">Nachricht erfolgreich gesendet</p>',

@@ -33,28 +33,38 @@ $password = $_POST['password'] ?? null;
 
 
 $schoolNameFromGet = isset($_GET['schoolName']) ? htmlspecialchars($_GET['schoolName']) : null;
+$serverNameFromGet = isset($_GET['serverName']) ? htmlspecialchars($_GET['serverName']) : null;
+
 
 if ($username && $password) {
     $username = trim($username);
     $password = trim($password);
 
-
-
-    $submittedSchoolName = isset($_POST['schoolName']) && $_POST['schoolName'] !== '' ? trim($_POST['schoolName']) : null;
-
-
     try {
+
+        $submittedSchoolName = isset($_POST['schoolName']) && $_POST['schoolName'] !== '' ? trim($_POST['schoolName']) : null;
+        $submittedServerName = isset($_POST['serverName']) && $_POST['serverName'] !== '' ? trim($_POST['serverName']) : null;
+
+
+        // Don't allow users with numbers in their username, because they have a class account and this system is not designed for class accounts.
+        if(preg_match('/\d/', $username)) {
+            Logger::log("Login failed: Username contains numbers and is therefore a class account", $username);
+            throw new AuthenticationException("Username contains numbers");
+        }
+
+
         $conn = connectToDatabase();
         $pwLoggingMode = getValueFromDatabase($conn, "settings", "pw_logging_mode", ["id" => 1], "Admin");
         $submittedSchoolName = $submittedSchoolName ?? getValueFromDatabase($conn, "users", "school_name", ["username" => $username], $username) ?? "gym-osterode";
-        $sessionId = loginToWebUntis($username, $password, $pwLoggingMode, $submittedSchoolName);
+        $submittedServerName = $submittedServerName ?? getValueFromDatabase($conn, "users", "server_name", ["username" => $username], $username) ?? "niobe";
+        $sessionId = loginToWebUntis($username, $password, $pwLoggingMode, $conn, $submittedSchoolName, $submittedServerName);
 
 
         $isUserInDatabaseAndAuthenticated = authenticateEncryptedPassword($conn, $username, $password);
         if (!$isUserInDatabaseAndAuthenticated) {
             $passwordCipherAndHash = encryptAndHashPassword($password);
             if (empty(getRowsFromDatabase($conn, "users", ["username" => $username], $username))) {
-                insertIntoDatabase($conn, "users", ["username", "password_cipher", "password_hash", "school_name"], [$username, $passwordCipherAndHash[0], $passwordCipherAndHash[1], $submittedSchoolName], $username);
+                insertIntoDatabase($conn, "users", ["username", "password_cipher", "password_hash", "school_name", "server_name"], [$username, $passwordCipherAndHash[0], $passwordCipherAndHash[1], $submittedSchoolName, $submittedServerName], $username);
             } else {
                 updateDatabase($conn, "users", ["password_cipher", "password_hash"], ["username = ?"], [$passwordCipherAndHash[0], $passwordCipherAndHash[1], $username], $username);
             }
@@ -78,6 +88,10 @@ if ($username && $password) {
         Logger::log("Login failed: " . $e->getMessage(), $username);
         if (str_contains($e->getMessage(), 'bad credentials')) {
             $loginMessage = getMessageText("loginFailedBadCredentials");
+        } elseif (str_contains($e->getMessage(), 'invalid schoolname')) {
+            $loginMessage = getMessageText("loginFailedInvalidSchoolname");
+        } elseif ($e = "Username contains numbers") {
+            $loginMessage = getMessageText("loginFailedUsernameContainsNumbers");
         }
     }
 
@@ -105,6 +119,7 @@ if ($username && $password) {
 
     <form action="login" method="post">
         <input type="hidden" name="schoolName" value="<?php echo $schoolNameFromGet; ?>">
+        <input type="hidden" name="serverName" value="<?php echo $serverNameFromGet; ?>">
 
         <button id="toggle-theme" class="dark-mode-switch-btn" type="button">
             <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
