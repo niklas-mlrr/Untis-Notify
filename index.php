@@ -46,10 +46,10 @@ if ($username && $password) {
         $submittedServerName = isset($_POST['serverName']) && $_POST['serverName'] !== '' ? trim($_POST['serverName']) : null;
 
 
-        // Don't allow users with numbers in their username, because they have a class account and this system is not designed for class accounts.
+        // Don't allow users with numbers in their username, because these are class accounts and this system is not designed for class accounts.
         if(preg_match('/\d/', $username)) {
             Logger::log("Login failed: Username contains numbers and is therefore a class account", $username);
-            throw new AuthenticationException("Username contains numbers");
+            throw new AuthenticationException("Username contains numbers and is therefore a class account");
         }
 
 
@@ -85,12 +85,11 @@ if ($username && $password) {
 
     } catch (AuthenticationException | Exception $e) {
         $loginMessage = getMessageText("loginFailed");
-        Logger::log("Login failed: " . $e->getMessage(), $username);
         if (str_contains($e->getMessage(), 'bad credentials')) {
             $loginMessage = getMessageText("loginFailedBadCredentials");
         } elseif (str_contains($e->getMessage(), 'invalid schoolname')) {
             $loginMessage = getMessageText("loginFailedInvalidSchoolname");
-        } elseif ($e = "Username contains numbers") {
+        } elseif (str_contains($e, "Username contains numbers")) {
             $loginMessage = getMessageText("loginFailedUsernameContainsNumbers");
         }
     }
