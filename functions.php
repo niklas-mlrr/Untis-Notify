@@ -318,7 +318,7 @@ function preventRepeatedEmails(string $newLogEntry, string $username, mysqli $co
 
     $newLogEntry = substr($newLogEntry, 0, -2); // Cut off the last two characters (line break and space) to match the log format
 
-    if ($nOfExactSameEntries >= 3) {
+    if ($nOfExactSameEntries >= 3 && !str_contains($newLogEntry, "Testbenachrichtigung")) {
         if($nOfAdminNotificationsAboutPrevention <= 2) {
             sendEmail($config['adminUsername'], PREVENTED_SENDING_EMAIL, PREVENTED_SENDING_EMAIL . " to $username because the exact same email was already send $nOfExactSameEntries times today.", "", "Log entry that would have been created if no intervention happened: <br>$newLogEntry", date("Ymd"), $conn);
         }
