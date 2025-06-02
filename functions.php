@@ -22,6 +22,7 @@ require 'vendor/autoload.php';
 const DATABASE_EXCEPTION_PREFIX = 'DatabaseException: ';
 const CURL_ERROR_PREFIX = 'Curl error: ';
 const PREPARE_FAILED_PREFIX = 'Prepare failed: ';
+const PREVENTED_SENDING_EMAIL = 'Prevented sending email';
 
 
 /**
@@ -37,10 +38,16 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
         $pwLoggingMode = getValueFromDatabase($conn, "settings", "pw_logging_mode", ["id" => 1], "Admin");
         $login = loginToWebUntis($username, $password, $pwLoggingMode, $conn);
         $notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username], $username);
-    } catch (AuthenticationException|DatabaseException|UserException) {
+    } catch (AuthenticationException|DatabaseException|UserException $e) {
+        Logger::log("Initial check setup failed for user '$username'. Error: " . $e->getMessage(), $username);
         return;
     } catch (APIException $e) {
-        Logger::log("APIException: Students konnten nicht abgerufen werden, API Response: $e", $username);
+        $errorMessage = $e->getMessage();
+        if (str_contains($errorMessage, 'not authenticated') || str_contains($errorMessage, '"code":-8520')) {
+            Logger::log("API AUTHENTICATION ERROR during initial setup for user '$username'. Halting checks. Error: $errorMessage", $username);
+        } else {
+            Logger::log("APIException during initial setup for user '$username' (e.g. students could not be fetched). Halting checks. API Response: $errorMessage", $username);
+        }
         return;
     }
 
@@ -56,7 +63,21 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
 
     for ($i = 0; $i < $notificationForDaysInAdvance; $i++) {
         $date = date("Ymd", strtotime("+$i days"));
-        $differences = array_merge($differences, checkCompareAndUpdateTimetable($date, $conn, $login[0], $login[1], $username));
+        try {
+            $dailyDifferences = checkCompareAndUpdateTimetable($date, $conn, $login[0], $login[1], $username);
+            $differences = array_merge($differences, $dailyDifferences);
+        } catch (APIException $e) {
+            $errorMessage = $e->getMessage();
+            if (str_contains($errorMessage, '"not authenticated"') || str_contains($errorMessage, '"code":-8520')) {
+                Logger::log("API AUTHENTICATION ERROR: Halting timetable checks for user '$username' due to authentication failure. Date being checked: $date. Error: $errorMessage", $username);
+                return;
+            } else {
+                Logger::log("API ERROR (non-auth): Error fetching timetable for user '$username' for date $date. Continuing to next day. Error: $errorMessage", $username);
+            }
+        } catch (Exception $e) {
+            Logger::log("UNEXPECTED ERROR: Halting timetable checks for user '$username' during check for date $date. Error: " . $e->getMessage(), $username);
+            return;
+        }
     }
 
 
@@ -71,6 +92,7 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
  * @param string $username
  * @param bool|null $secondRunOfFunction
  * @return array
+ * @throws APIException
  */
 function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $login, int $userId, string $username, bool $secondRunOfFunction = false): array {
     try {
@@ -100,7 +122,7 @@ function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $logi
     } catch (APIException $e) {
         if($secondRunOfFunction) {
             Logger::log("APIException: Auch beim 2. Durchlauf konnten die Stundenplandaten nicht erfolgreich abgerufen werden; API Response: $e", $username);
-            return [];
+            throw new APIException($e);
         } else {
             Logger::log("APIException: Stundenplandaten nicht erfolgreich abgerufen; API Response: $e", $username);
             return checkCompareAndUpdateTimetable($date, $conn, $login, $userId, $username, true);
@@ -127,18 +149,14 @@ function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $logi
  * @param string $miscellaneous
  * @param $date
  * @param mysqli $conn
- * @return bool
+ * @return void
  * @throws DatabaseException
  * @throws UserException
  */
 function sendEmail(string $username, string $affectedLessons, string $message, string $oldValue, string $miscellaneous, $date, mysqli $conn): void {
     global $config;
 
-    try {
-        $recipientEmail = getValueFromDatabase($conn, "users", "email_adress", ["username" => $username], $username);
-    } catch (DatabaseException $e) {
-        throw new DatabaseException(DATABASE_EXCEPTION_PREFIX . $e->getMessage());
-    }
+    $recipientEmail = getValueFromDatabase($conn, "users", "email_adress", ["username" => $username], $username);
 
     $weekday = match ((int)date('w', strtotime($date))) {
         0 => "So",
@@ -186,8 +204,7 @@ function sendEmail(string $username, string $affectedLessons, string $message, s
 
 
         $forDate = date("d.m.Y", strtotime($date));
-        $currentExactDate = date("d.m.Y H:i:s");
-        logNotificationToFile($currentExactDate, $forDate, $username, $affectedLessons, $message, $oldValue, $miscellaneous, $conn);
+        logNotificationToFile($forDate, $username, $affectedLessons, $message, $oldValue, $miscellaneous, $conn);
 
         $mail->send();
 
@@ -195,7 +212,7 @@ function sendEmail(string $username, string $affectedLessons, string $message, s
         Logger::log("Email could not be sent. Mailer Error: $mail->ErrorInfo", $username);
         throw new UserException("Email could not be sent. Mailer Error: $mail->ErrorInfo", 0);
     } catch (UserException) {
-        throw new UserException("Prevented sending email", 0);
+        throw new UserException(PREVENTED_SENDING_EMAIL, 0);
     }
 }
 
@@ -278,7 +295,6 @@ function getEmailBody($message, $oldValue, $miscellaneous): string {
  * @param mysqli $conn
  * @return void
  * @throws UserException
- * @throws DatabaseException
  */
 function preventRepeatedEmails(string $newLogEntry, string $username, mysqli $conn): void {
     global $config;
@@ -298,16 +314,16 @@ function preventRepeatedEmails(string $newLogEntry, string $username, mysqli $co
     $newLogEntry = substr($newLogEntry, 22); // Cut off the date part of the log entry
     $nOfExactSameEntries = substr_count($previousLogContent, $newLogEntry);
 
-    $nOfAdminNotificationsAboutPrevention = substr_count($previousLogContent, "Prevented sending email to $username");
+    $nOfAdminNotificationsAboutPrevention = substr_count($previousLogContent, PREVENTED_SENDING_EMAIL . " to $username");
 
     $newLogEntry = substr($newLogEntry, 0, -2); // Cut off the last two characters (line break and space) to match the log format
 
     if ($nOfExactSameEntries >= 3) {
         if($nOfAdminNotificationsAboutPrevention <= 2) {
-            sendEmail($config['adminUsername'], "Prevented sending email", "Prevented sending email to $username because the exact same email was already send $nOfExactSameEntries times today.", "", "Log entry that would have been created if no intervention happened: <br>$newLogEntry", date("Ymd"), $conn);
+            sendEmail($config['adminUsername'], PREVENTED_SENDING_EMAIL, PREVENTED_SENDING_EMAIL . " to $username because the exact same email was already send $nOfExactSameEntries times today.", "", "Log entry that would have been created if no intervention happened: <br>$newLogEntry", date("Ymd"), $conn);
         }
-        Logger::log("Prevented sending email because the exact same email was already send $nOfExactSameEntries times today", $username);
-        throw new UserException("Prevented sending email", 0);
+        Logger::log(PREVENTED_SENDING_EMAIL . " because the exact same email was already send $nOfExactSameEntries times today", $username);
+        throw new UserException(PREVENTED_SENDING_EMAIL, 0);
     }
 }
 
@@ -324,7 +340,6 @@ function preventRepeatedEmails(string $newLogEntry, string $username, mysqli $co
 
 
 /**
- * @param $dateSent
  * @param $forDate
  * @param string $username
  * @param string $affectedLessons
@@ -333,10 +348,12 @@ function preventRepeatedEmails(string $newLogEntry, string $username, mysqli $co
  * @param string $miscellaneous
  * @return void
  */
-function logNotificationToFile($dateSent, $forDate, string $username, string $affectedLessons, string $message, string $oldValue, string $miscellaneous, $conn): void {
+function logNotificationToFile($forDate, string $username, string $affectedLessons, string $message, string $oldValue, string $miscellaneous, $conn): void {
+    $currentExactDate = date("d.m.Y H:i:s");
+
     $logEntry = sprintf(
         "[%s] ForDate: %s, Username: %s, AffectedLessons: %s, Message: %s, OldValue: %s, Miscellaneous: %s\n",
-        $dateSent,
+        $currentExactDate,
         $forDate,
         $username,
         $affectedLessons,
@@ -348,7 +365,7 @@ function logNotificationToFile($dateSent, $forDate, string $username, string $af
     try {
         preventRepeatedEmails($logEntry, $username, $conn);
     } catch (UserException) {
-        throw new UserException("Prevented sending email", 0);
+        throw new UserException(PREVENTED_SENDING_EMAIL, 0);
     }
 
 
@@ -811,7 +828,7 @@ function findIrregularLessons(array $array1, array $array2, $timetable, $formate
 
             if ($irregularEndLessonNum - $irregularStartLessonNum == 1) {
                 $affectedLessons = "$irregularStartLessonNum. & $irregularEndLessonNum. Stunde";
-            } elseif (($irregularEndLessonNum - $irregularStartLessonNum) > 2) {
+            } elseif (($irregularEndLessonNum - $irregularStartLessonNum) >= 2) {
                 $affectedLessons = "$irregularStartLessonNum. - $irregularEndLessonNum. Stunde";
             } else {
                 $affectedLessons = "$irregularStartLessonNum. Stunde";
@@ -1302,6 +1319,7 @@ function getRowsFromDatabase(mysqli $conn, string $table, array $inputsAndCondit
  * @param array $inputsAndConditions
  * @param string $username
  * @return string|null
+ * @throws DatabaseException
  */
 function getValueFromDatabase(mysqli $conn, string $table, string $dataFromColumn, array $inputsAndConditions, string $username): ?string {
     $conditions = [];
