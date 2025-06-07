@@ -1,18 +1,20 @@
 -- Users table
 CREATE TABLE `users` (
-    `id` int(10) UNSIGNED NOT NULL,
-    `username` varchar(20) NOT NULL,
-    `password_cipher` varchar(255) NOT NULL,
-    `password_hash` varchar(255) NOT NULL,
-    `email_adress` varchar(70) DEFAULT NULL,
-    `setup_complete` tinyint(1) DEFAULT 0,
-    `notification_for_days_in_advance` int(11) DEFAULT 10,
-    `receive_notifications_for` varchar(70) NOT NULL DEFAULT 'ausfall, vertretung, raumänderung, sonstiges',
-    `last_login` datetime DEFAULT NULL,
-    `created` datetime DEFAULT current_timestamp(),
-    `dictionary` varchar(300) DEFAULT NULL,
-    `school_name` varchar(30) NOT NULL,
-    `server_name` varchar(30) NOT NULL
+    `id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `username` VARCHAR(20) NOT NULL,
+    `password_cipher` VARCHAR(255) NOT NULL,
+    `password_hash` VARCHAR(255) NOT NULL,
+    `email_adress` VARCHAR(70) DEFAULT NULL,
+    `setup_complete` TINYINT(1) DEFAULT 0,
+    `notification_for_days_in_advance` INT(11) DEFAULT 10,
+    `receive_notifications_for` VARCHAR(70) NOT NULL DEFAULT 'ausfall, vertretung, raumänderung, sonstiges',
+    `last_login` DATETIME DEFAULT NULL,
+    `created` DATETIME DEFAULT CURRENT_TIMESTAMP(),
+    `dictionary` VARCHAR(300) DEFAULT NULL,
+    `school_name` VARCHAR(30) NOT NULL,
+    `server_name` VARCHAR(30) NOT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Timetables table
