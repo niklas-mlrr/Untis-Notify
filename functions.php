@@ -452,7 +452,11 @@ function loginToWebUntis(string $username, string $password, bool $pwLoggingMode
  * @throws APIException
  */
 function sendApiRequest(string $sessionId, array $payload, string $username): array {
-    $conn = connectToDatabase();
+    try {
+        $conn = connectToDatabase();
+    } catch (Exception|DatabaseException $e) {
+        Logger::log("Hier entsteht der Fehler:" . $e->getMessage(), $username);
+    }
     $schoolName = getValueFromDatabase($conn, "users", "school_name", ["username" => $username], $username);
     $serverName = getValueFromDatabase($conn, "users", "server_name", ["username" => $username], $username);
 
