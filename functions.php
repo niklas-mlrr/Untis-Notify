@@ -259,7 +259,7 @@ function getEmailBody($message, $oldValue, $miscellaneous): string {
             <div class="content">
                 <p>Ab sofort erhältst du Benachrichtigungen, wenn es Änderungen in deinem Untis Stundenplan gibt. Alle 10 Min. wird dieser überprüft.</p>
                 <p>Forder, Förder und Chor werden hierbei nicht berücksichtigt, da diese auf Untis nicht im "persönlichen" Stundenplan, sondern nur in dem für die gesamte Klasse stehen. <br>In Einzelfällen, wie z. B. an Jokertagen, kann es vorkommen, dass nicht alles richtig verarbeitet werden kann.</p>
-                <p>Es kann sein, dass die Emails (auch erst nach ein paar Wochen, in denen es funktioniert hat), vom Email-Programm als Spam erkannt werden. <br><br>In diesem Fall muss eine Email einmalig im Spam-Ordner als "Nicht Spam" markiert werden. Um dieses Problem vorzubeugen, kann auch diese Test-Email schon als "Wichtig" oder "Kein Spam" markiert werden (z. B. Gmail: [Drei-Punkte-Menü] → [Als wichtig markieren]).</p><br>
+                <p>Es kann sein, dass die E-Mails (auch erst nach ein paar Wochen, in denen es funktioniert hat) vom E-Mail-Programm als Spam erkannt werden. <br><br>In diesem Fall muss eine E-Mail einmalig im Spam-Ordner als "Nicht Spam" markiert werden. Um diesem Problem vorzubeugen, kann auch diese Test-E-Mail schon als "Wichtig" oder "Kein Spam" markiert werden (z. B. Gmail: [Drei-Punkte-Menü] → [Als wichtig markieren]).</p><br>
                 <p>Bei Fehlern oder Fragen mir gerne schreiben.</p>
             </div>
         ';
@@ -577,11 +577,11 @@ function getFormatedTimegrid($schoolTimegrid): array {
 
     foreach ($timeUnits as $unit) {
         if (isset($unit['startTime'], $unit['name'])) {
-            // Ensure startTime is a string key and name is an integer value
+            // Ensure startTime is a string key and the name is an integer value
             $startTimes[(string)$unit['startTime']] = (int)$unit['name'];
         }
         if (isset($unit['endTime'], $unit['name'])) {
-            // Ensure endTime is a string key and name is an integer value
+            // Ensure endTime is a string key and the name is an integer value
             $endTimes[(string)$unit['endTime']] = (int)$unit['name'];
         }
     }
@@ -611,7 +611,7 @@ function cmp($a, $b) {
  * @param string $replacements
  * @return array
  */
-// Der ReplacementArray wird jedes Mal neu generiert,
+// Das ReplacementArray wird jedes Mal neu generiert,
 // da die direkte Benutzereingabe in der Db gespeichert wird,
 // da diese jederzeit vom Benutzer änderbar sein muss.
 function generateReplacementArray(string $replacements): array {
@@ -694,6 +694,108 @@ function getFormatedTimetable(array $timetable, string $replacements, array $for
 
     return $formatedTimetable;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Filters out cancellation notifications that occur during an irregular lesson period.
+ *
+ * @param array $canceledDifferences The list of cancellation differences.
+ * @param array $originalLessons The array containing original lesson details (previously $array1).
+ * @param mixed $irregularEndTime The end time of the irregular lesson (e.g., 1030).
+ * @param int $irregularStartLessonNum The starting lesson number of the irregular lesson.
+ * @return array The filtered list of cancellation differences, excluding those during the irregular lesson.
+ */
+function filterCancellationsDuringIrregularLesson(array $canceledDifferences, array $originalLessons, $irregularEndTime, int $irregularStartLessonNum): array {
+    // If irregularEndTime is not set, or irregularStartLessonNum is not valid,
+    // it implies no specific irregular lesson period to filter by, so return original differences.
+    if (!$irregularEndTime || $irregularStartLessonNum <= 0) {
+        return $canceledDifferences;
+    }
+
+    $cancellationsToExclude = [];
+    foreach ($canceledDifferences as $difference) {
+        // Extract the lesson number from the affectedLessons string (e.g., "1. Stunde")
+        preg_match('/(\d+)\./', $difference['affectedLessons'], $matches);
+        if (isset($matches[1])) {
+            $lessonNum = (int)$matches[1];
+
+            // Find the corresponding original lesson to check its timing
+            foreach ($originalLessons as $item) {
+                if (isset($item['lessonNum']) && $item['lessonNum'] == $lessonNum) {
+                    // Check if the lesson falls within the irregular lesson period:
+                    // - The lesson has no defined end time (original logic included this)
+                    // - OR the lesson ends at or before the irregular lesson ends, AND
+                    //   the lesson number is at or after the irregular lesson starts.
+                    if (!isset($item['endTime']) || ($item['endTime'] <= $irregularEndTime && $item['lessonNum'] >= $irregularStartLessonNum)) {
+                        $cancellationsToExclude[] = $difference;
+                    }
+                    break; // Found the matching original lesson
+                }
+            }
+        }
+    }
+
+    // If no cancellations were identified to be excluded, return the original list.
+    if (empty($cancellationsToExclude)) {
+        return $canceledDifferences;
+    }
+
+    // Filter the main $canceledDifferences list to remove items found in $cancellationsToExclude.
+    // The customArrayAny function is assumed to exist and correctly compares two different items.
+    $finalCanceledDifferences = array_filter($canceledDifferences, function ($difference) use ($cancellationsToExclude) {
+        if (customArrayAny($cancellationsToExclude, fn($excludedDiff) =>
+            $difference['message'] === $excludedDiff['message'] &&
+            $difference['affectedLessons'] === $excludedDiff['affectedLessons'] &&
+            $difference['typeOfNotification'] === $excludedDiff['typeOfNotification'] &&
+            $difference['oldValue'] === $excludedDiff['oldValue']
+        )) {
+            return false; // Exclude this difference because it's in the $cancellationsToExclude list
+        }
+        return true; // Keep this difference
+    });
+
+    return array_values($finalCanceledDifferences); // Re-index array
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -872,41 +974,11 @@ function compareArrays(array $array1, array $array2, $date, $timetable, $formate
 
     list($canceledDifferences, $canceledLessons) = findCanceledItems($array1, $array2);
 
-    // Only add cancellation notifications if they aren't before/during an irregular lesson
-    if ($irregularEndTime) {
-        $filteredCancelDifferences = [];
-        foreach ($canceledDifferences as $difference) {
-            // Extract lesson number from the affectedLessons string
-            preg_match('/(\d+)\./', $difference['affectedLessons'], $matches);
-            if (isset($matches[1])) {
-                $lessonNum = (int)$matches[1];
-
-                // Get the original lesson to check its end time
-                foreach ($array1 as $item) {
-                    if (isset($item['lessonNum']) && $item['lessonNum'] == $lessonNum) {
-                        // Only add if the lesson's end time is after the irregular lesson's end time
-                        if (!isset($item['endTime']) || ($item['endTime'] <= $irregularEndTime && $item['lessonNum'] >= $irregularStartLessonNum)) {
-                            $filteredCancelDifferences[] = $difference;
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-        $canceledDifferencesWithInRangeOfIrregular = $filteredCancelDifferences;
-
-
-        // Filtere $canceledDifferences, um nur Einträge hinzuzufügen, die nicht in $canceledDifferencesWithInRangeOfIrregular enthalten sind
-        $canceledDifferences = array_filter($canceledDifferences, function ($difference) use ($canceledDifferencesWithInRangeOfIrregular) {
-            // Überspringe diesen Eintrag
-            if (customArrayAny($canceledDifferencesWithInRangeOfIrregular, fn($irregularDifference) => $difference['message'] === $irregularDifference['message'] &&
-                $difference['affectedLessons'] === $irregularDifference['affectedLessons'] &&
-                $difference['typeOfNotification'] === $irregularDifference['typeOfNotification'] &&
-                $difference['oldValue'] === $irregularDifference['oldValue'])) {
-                return false;
-            }
-            return true; // Behalte diesen Eintrag
-        });
+// Filter out cancellation notifications that occur during an irregular lesson
+// Assumes $canceledDifferences, $array1, $irregularEndTime, and $irregularStartLessonNum are defined in this scope.
+// The $irregularEndTime check is handled within the function, but the original structure implies it was meaningful.
+    if ($irregularEndTime && $irregularStartLessonNum) { // Ensure parameters are valid before calling
+        $canceledDifferences = filterCancellationsDuringIrregularLesson($canceledDifferences, $array1, $irregularEndTime, $irregularStartLessonNum);
     }
 
     $differences = array_merge($differences, $canceledDifferences);
@@ -1197,7 +1269,7 @@ function sendEmails($differences, $username, $conn): void {
         Logger::log("Zu viele Benachrichtigungen ($differencesCount): $differences", $username);
         $differences = [];
         $differences[] = createDifference("Das System wollte gerade $differencesCount Benachrichtigungen zu dir senden. Durch einen Sicherheitsmechanismus wurden diese abgefangen. Bitte wende dich an den Admin um zu erfahren, warum dir so viele Benachrichtigungen gesendet werden sollten.", "Zu viele Benachrichtigungen", "ausfall");
-        $differences[0]['date'] = date("Ymd"); // Adding date for this special case
+        $differences[0]['date'] = date("Ymd"); // Adding a date for this special case
     }
 
     foreach ($differences as $difference) {
@@ -1225,14 +1297,14 @@ function getMessageText($case): string {
         "loginFailedUsernameContainsNumbers" => '<p class="failed">Fehler beim Einloggen.<br><br>
         Dein Untis Account ist ein Klassenaccount. Das Benachrichtigungssystem funktioniert leider nur, wenn man einen persönlichen Stundenplan und nicht nur einen Klassenstundenplan abrufen kann.</p>',
         "settingsSavedSuccessfully" => '<p class="successful">Einstellungen erfolgreich gespeichert</p>',
-        "settingsSavedSuccessfullyAndReferToEmail" => '<p class="successful">Einstellungen erfolgreich gespeichert. <br> Du musst jedoch oben noch deine Email-Adresse angeben, zu welcher die Benachrichtigungen kommen sollen.</p>',
+        "settingsSavedSuccessfullyAndReferToEmail" => '<p class="successful">Einstellungen erfolgreich gespeichert. <br> Du musst jedoch oben noch deine E-Mail-Adresse angeben, zu welcher die Benachrichtigungen kommen sollen.</p>',
         "settingsSavedSuccessfullyAndHowToContinue" => '<p class="successful">Einstellungen erfolgreich gespeichert. <br> Um die Benachrichtigungen zu aktivieren, klicke auf "Testbenachrichtigungen senden".</p>',
         "settingsNotSaved" => '<p class="failed">Fehler beim Speichern der Einstellungen</p>',
         "accountDeletedSuccessfully" => '<p class="successful">Konto erfolgreich gelöscht</p>',
         "accountNotDeleted" => '<p class="failed">Fehler beim Löschen des Kontos</p>',
         "testNotificationSent" => '<p class="successful">Testbenachrichtigungen erfolgreich gesendet. <br> Somit ist das Setup erfolgreich abgeschlossen und ab jetzt wird regelmäßig überprüft, ob es Änderungen für dich gibt.</p>',
         "testNotificationNotSent" => '<p class="failed">Fehler beim Senden der Testbenachrichtigung</p>',
-        "testNotificationNotSentInvalidEmail" => '<p class="failed">Fehler beim Senden der Testbenachrichtigung. <br><br> Bitte überprüfe deine Email-Adresse, speichere und versuche es erneut.</p>',
+        "testNotificationNotSentInvalidEmail" => '<p class="failed">Fehler beim Senden der Testbenachrichtigung. <br><br> Bitte überprüfe deine E-Mail-Adresse, speichere und versuche es erneut.</p>',
         "dbError" => '<p class="failed">Fehler beim Abruf der Daten aus der Datenbank</p>',
         "dbConnError" => '<p class="failed">Fehler beim Herstellen der Verbindung zur Datenbank</p>',
         "emptyFields" => '<p class="failed">Bitte fülle alle Felder aus</p>',
@@ -1240,7 +1312,7 @@ function getMessageText($case): string {
         "messageNotSent" => '<p class="failed">Fehler beim Senden der Nachricht</p>',
         "notificationOrDictionaryError" => '<p class="failed">Einstellungen nicht gespeichert. <br> Entweder hast du nicht mindestens eine Benachrichtigungsart ausgewählt oder das Dictionary nicht im korrekten Format angegeben.</p>',
         "receiveNotificationsForError" => '<p class="failed">Fehler beim Setzen der Benachrichtigungsarten</p>',
-        "noEmailAdress" => '<p class="failed">Zuerst musst du oben deine Email-Adresse angeben, zu welcher die Benachrichtigungen kommen sollen und speichern.</p>',
+        "noEmailAdress" => '<p class="failed">Zuerst musst du oben deine E-Mail-Adresse angeben, zu welcher die Benachrichtigungen kommen sollen, und speichern.</p>',
         "howToChangeOrDisableNotifications" => '<p class="successful">Um die Benachrichtigungen zu ändern oder abzubestellen, melde dich erneut an und ändere deine Einstellungen oder lösche dein Konto.</p>',
         default => "",
     };
