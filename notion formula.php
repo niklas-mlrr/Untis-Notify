@@ -37,7 +37,7 @@ try {
             // Continue with your existing code for when it is a Monday
             $replacements = getValueFromDatabase($conn, "users", "dictionary", ["username" => $username], $username);
 
-            $timetableWeek = getTimetableWeek($startOfWeek, $login[0], $login[1], $username, $replacements);
+            $timetableWeek = getTimetableWeek($startOfWeek, $login[0], $login[1], $username, $conn, $replacements);
             list($subjectsThatAppearMultipleTimes, $day, $subject) = getSubjectsThatAppearMultipleTimes($timetableWeek);
 
             $notionFormula = getNotionFormula($subjectsThatAppearMultipleTimes);

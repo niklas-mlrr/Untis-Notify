@@ -61,9 +61,7 @@ try {
     redirectToSettingsPage("dbError");
 }
 
-echo "<pre>";
-echo "Conn: \n";
-print_r($conn);
+
 initiateCheck($conn, $username, $password);
 
 

@@ -96,10 +96,10 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
  */
 function checkCompareAndUpdateTimetable(string $date, mysqli $conn, string $login, int $userId, string $username, bool $secondRunOfFunction = false): array {
     try {
-        $timetable = getTimetable($login, $userId, $date, $username);
+        $timetable = getTimetable($login, $userId, $date, $username, $conn);
         $replacements = getValueFromDatabase($conn, "users", "dictionary", ["username" => $username], $username);
 
-        $timegrid = getTimegrid($login, $username);
+        $timegrid = getTimegrid($login, $username, $conn);
         $formatedTimegrid = getFormatedTimegrid($timegrid);
 
         $formatedTimetable = getFormatedTimetable($timetable, $replacements, $formatedTimegrid);
@@ -448,15 +448,11 @@ function loginToWebUntis(string $username, string $password, bool $pwLoggingMode
  * @param string $sessionId
  * @param array $payload
  * @param string $username
+ * @param mysqli $conn
  * @return array
- * @throws APIException
+ * @throws APIException|DatabaseException
  */
-function sendApiRequest(string $sessionId, array $payload, string $username): array {
-    try {
-        $conn = connectToDatabase();
-    } catch (Exception|DatabaseException $e) {
-        Logger::log("Hier entsteht der Fehler:" . $e->getMessage(), $username);
-    }
+function sendApiRequest(string $sessionId, array $payload, string $username, mysqli $conn): array {
     $schoolName = getValueFromDatabase($conn, "users", "school_name", ["username" => $username], $username);
     $serverName = getValueFromDatabase($conn, "users", "server_name", ["username" => $username], $username);
 
@@ -497,11 +493,11 @@ function sendApiRequest(string $sessionId, array $payload, string $username): ar
  * @param int $userId
  * @param string $date
  * @param string $username
+ * @param mysqli $conn
  * @return array
  * @throws APIException
  */
-function getTimetable(string $sessionId, int $userId, string $date, string $username): array {
-    $conn = connectToDatabase();
+function getTimetable(string $sessionId, int $userId, string $date, string $username, mysqli $conn): array {
     $schoolName = getValueFromDatabase($conn, "users", "school_name", ["username" => $username], $username);
 
     $schoolSpecificType = ($schoolName === "hh5868") ? 1 : 5; // hh5868: 1 für Schüler, TRG: 5 für Schüler, 2 für Lehrer
@@ -533,7 +529,7 @@ function getTimetable(string $sessionId, int $userId, string $date, string $user
     ];
 
     try {
-        return sendApiRequest($sessionId, $payload, $username);
+        return sendApiRequest($sessionId, $payload, $username, $conn);
     } catch (APIException $e) {
         throw new APIException($e->getMessage());
     }
@@ -544,10 +540,11 @@ function getTimetable(string $sessionId, int $userId, string $date, string $user
 /**
  * @param string $sessionId
  * @param string $username
+ * @param mysqli $conn
  * @return array
  * @throws APIException
  */
-function getTimegrid(string $sessionId, string $username): array {
+function getTimegrid(string $sessionId, string $username, mysqli $conn): array {
     $payload = [
         "id" => "fetchTimegridUnits_ts_example_" . time() . "_" . rand(),
         "method" => "getTimegridUnits",
@@ -557,7 +554,7 @@ function getTimegrid(string $sessionId, string $username): array {
 
 
     try {
-        return sendApiRequest($sessionId, $payload, $username);
+        return sendApiRequest($sessionId, $payload, $username, $conn);
     } catch (APIException $e) {
         throw new APIException("Failed to fetch school timegrid: " . $e->getMessage());
     }
@@ -598,24 +595,14 @@ function getFormatedTimegrid($schoolTimegrid): array {
 
 
 function cmp($a, $b) {
-    global $config;
-    $adminUsername = $config['adminUsername'];
-
     try {
         if (!isset($a['lessonNum']) || !isset($b['lessonNum']) || !is_int($a['lessonNum']) || !is_int($b['lessonNum'])) {
             throw new Exception();
         }
         return $a['lessonNum'] - $b['lessonNum'];
     } catch (Exception) {
-        try {
-            Logger::log("Error in cmp function");
-            $conn = connectToDatabase();
-            sendEmail($adminUsername, "Error in cmp function", "Stundenplanzeiten der Schule haben sich wahrscheinlich geändert", "", "", date("Ymd"), $conn);
-            exit();
-        } catch (DatabaseException|UserException) {
-            return 0;
-        }
-
+        Logger::log("Error in cmp function");
+        exit();
     }
 }
 
@@ -1576,17 +1563,18 @@ function redirectToSettingsPage($urlParameterMessage): void {
  * @param string $login
  * @param string $userId
  * @param string $username
+ * @param mysqli $conn
  * @param string|null $replacements
  * @return array|array[]
  * @throws APIException
  */
-function getTimetableWeek(string $startOfWeek, string $login, string $userId, string $username, ?string $replacements): array {
+function getTimetableWeek(string $startOfWeek, string $login, string $userId, string $username, mysqli $conn, ?string $replacements): array {
     $timetableWeek = [];
     for ($i = 0; $i <= 4; $i++) {
         $dayToCheck = date('Ymd', strtotime($startOfWeek . " +$i day"));
 
-        $timetable = getTimetable($login, $userId, $dayToCheck, $username);
-        $timegrid = getTimegrid($login, $username);
+        $timetable = getTimetable($login, $userId, $dayToCheck, $username, $conn);
+        $timegrid = getTimegrid($login, $username, $conn);
         $formatedTimegrid = getFormatedTimegrid($timegrid);
         $formatedTimetable = getFormatedTimetable($timetable, $replacements, $formatedTimegrid);
 
