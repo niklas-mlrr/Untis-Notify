@@ -124,7 +124,7 @@ if ($username && $password) {
             <img src="https://img.icons8.com/?size=100&id=648&format=png&color=0000009C" alt="Dark-mode-switch" class="dark-mode-switch-icon">
         </button>
         <h2>Untis Notify</h2>
-        <h4>- Benachrichtigungen für Untis -</h4>
+        <h4>– Benachrichtigungen für Untis –</h4>
         <br>
 
         <label for="username">Untis Benutzername:</label>

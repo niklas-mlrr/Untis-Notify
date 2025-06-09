@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action'])) {
             throw new UserException("Dictionary format incorrect", 2);
         }
 
-        $receiveNotificationsForString = implode(', ', $receiveNotificationsFor); // Convert array to comma-separated string
+        $receiveNotificationsForString = implode(', ', $receiveNotificationsFor); // Convert the array to comma-separated string
         deleteFromDatabase($conn, "timetables", ["user = ?"], [$username], $username); // Delete timetable data with the old dictionary
         updateDatabase($conn, "users", ["email_adress", "dictionary", "notification_for_days_in_advance", "receive_notifications_for"], ["username = ?"], [$emailAdress, $dictionary, $notificationForDaysInAdvance, $receiveNotificationsForString, $username], $username);
         initiateCheck($conn, $username, $password);

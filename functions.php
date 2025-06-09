@@ -38,7 +38,7 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
         $pwLoggingMode = getValueFromDatabase($conn, "settings", "pw_logging_mode", ["id" => 1], "Admin");
         $login = loginToWebUntis($username, $password, $pwLoggingMode, $conn);
         $notificationForDaysInAdvance = getValueFromDatabase($conn, "users", "notification_for_days_in_advance", ["username" => $username], $username);
-    } catch (AuthenticationException|DatabaseException|UserException $e) {
+    } catch (AuthenticationException|DatabaseException $e) {
         Logger::log("Initial check setup failed for user '$username'. Error: " . $e->getMessage(), $username);
         return;
     } catch (APIException $e) {
@@ -395,6 +395,7 @@ function logNotificationToFile($forDate, string $username, string $affectedLesso
  * @param string $serverName
  * @return array 1. The session ID; 2. The userId
  * @throws AuthenticationException
+ * @throws DatabaseException
  */
 function loginToWebUntis(string $username, string $password, bool $pwLoggingMode, $conn, string $schoolName = "", string $serverName = ""): array {
     if(empty($schoolName) || empty($serverName)) {
@@ -663,7 +664,7 @@ function replaceSubjectWords(string $subject, string $replacements): string {
  */
 function getFormatedTimetable(array $timetable, string $replacements, array $formatedTimegrid): array {
 
-    $timetable = removeDuplicateLessons($timetable);
+    $timetable = removeDuplicateLessonsFromUnformatedTimetable($timetable);
     $timetable = removeCancelledLessonsWhileIrregular($timetable);
 
     $numOfLessons = count($timetable);
@@ -799,7 +800,7 @@ function filterCancellationsDuringIrregularLesson(array $canceledDifferences, ar
 
 
 
-function removeDuplicateLessons($timeTable): array {
+function removeDuplicateLessonsFromUnformatedTimetable($timeTable): array {
     $newTimeTable = [];
     $lessonNums = [];
 
@@ -810,8 +811,9 @@ function removeDuplicateLessons($timeTable): array {
             $indexOfFirstInstance = array_search($lessonNum, array_column($timeTable, "startTime"));
             $indexOfSecondInstance = array_search($lessonNum, array_column(array_slice($timeTable, $indexOfFirstInstance + 1), "startTime")) + $indexOfFirstInstance + 1;
 
-            $lesson = chooseNotCanceledLessonForDuplicateLessons($timeTable[$indexOfFirstInstance], $timeTable[$indexOfSecondInstance]);
+            $lesson = chooseNotCanceledLessonForDuplicateLessonsFromUnformatedTimetable($timeTable[$indexOfFirstInstance], $timeTable[$indexOfSecondInstance]);
             unset($newTimeTable[$indexOfExistingInstance]);
+            $newTimeTable = array_values($newTimeTable);
         } else {
             $lessonNums[] = $lessonNum;
         }
@@ -821,7 +823,7 @@ function removeDuplicateLessons($timeTable): array {
     return array_values($newTimeTable);
 }
 
-function chooseNotCanceledLessonForDuplicateLessons(array $lesson1, array $lesson2): ?array {
+function chooseNotCanceledLessonForDuplicateLessonsFromUnformatedTimetable(array $lesson1, array $lesson2): ?array {
 
     if(!isset($lesson1["code"]) || !isset($lesson2["code"])) {
         return $lesson1;
@@ -888,7 +890,7 @@ function removeCancelledLessonsWhileIrregular(array $timeTable): array {
  * @param array $array2 Current timetable array
  * @return array Array containing irregular lesson details [startLessonNum, endLessonNum, endTime, differences]
  */
-function findIrregularLessons(array $array1, array $array2, $timetable, $formatedTimegrid): array {
+function findIrregularLessons(array $array1, array $array2, $timetable, $formatedTimegrid, $differences): array {
 
     $irregularDifferences = [];
     $irregularStartLessonNum = "";
@@ -898,6 +900,17 @@ function findIrregularLessons(array $array1, array $array2, $timetable, $formate
 
     // Find if there's an irregular lesson and get its end time
     foreach ($array2 as $item) {
+        // Check if the item is already in the differences array as a subject change (to avoid duplicates)
+        foreach ($differences as $difference) {
+            if(empty($difference)) {
+                continue;
+            }
+            $lessonNumOfDifference = $difference['affectedLessons'];
+            if(str_contains($lessonNumOfDifference, $item["lessonNum"]) && str_contains($difference['message'], "Fachwechsel")){
+                continue 2;
+            }
+
+        }
 
         $positonOfItem = array_search($item, $array1);
         if (isset($item['code']) && $item['code'] == "irregular" && (!isset($array1[$positonOfItem]['code']) || $array1[$positonOfItem]['code'] != "irregular")) {
@@ -960,37 +973,27 @@ function findIrregularLessons(array $array1, array $array2, $timetable, $formate
  */
 function compareArrays(array $array1, array $array2, $date, $timetable, $formatedTimegrid): array {
 
-
-
     $differences = [];
     $fachwechselLessons = [];
 
-    // Find irregular lessons
-    $irregularInfo = findIrregularLessons($array1, $array2, $timetable, $formatedTimegrid);
+    list($canceledDifferences, $canceledLessons) = findCanceledItems($array1, $array2);
+    $differences = array_merge($differences, findChangedItems($array1, $array2, $canceledLessons, $fachwechselLessons));
+
+    $irregularInfo = findIrregularLessons($array1, $array2, $timetable, $formatedTimegrid, $differences);
     $irregularDifferencs = $irregularInfo['differences'];
     $irregularStartLessonNum = $irregularInfo['startLessonNum'];
     $irregularEndTime = $irregularInfo['endTime'];
 
-
-    list($canceledDifferences, $canceledLessons) = findCanceledItems($array1, $array2);
-
-// Filter out cancellation notifications that occur during an irregular lesson
-// Assumes $canceledDifferences, $array1, $irregularEndTime, and $irregularStartLessonNum are defined in this scope.
-// The $irregularEndTime check is handled within the function, but the original structure implies it was meaningful.
     if ($irregularEndTime && $irregularStartLessonNum) { // Ensure parameters are valid before calling
         $canceledDifferences = filterCancellationsDuringIrregularLesson($canceledDifferences, $array1, $irregularEndTime, $irregularStartLessonNum);
     }
 
+
     $differences = array_merge($differences, $canceledDifferences);
     $differences = array_merge($differences, $irregularDifferencs);
-
-
-
-    $differences = array_merge($differences, findChangedItems($array1, $array2, $canceledLessons, $fachwechselLessons));
     $differences = array_merge($differences, findNewItems($array1, $array2));
-
+    $differences = checkAndCombineDifferencesForTheSameLesson($differences);
     $differences = combineNotifications($differences);
-
     $differences = removeDifferencesInsideIrregularTimespan($differences, $irregularInfo);
 
     // Add the for_date to each entry
@@ -1120,7 +1123,8 @@ function findChangedItems($array1, $array2, $canceledLessons, &$fachwechselLesso
                     $differences[] = createDifference("Sonderfall: Eigenschaft \"$subKey\" fehlt", "{$item['lessonNum']}. Stunde", "sonstiges");
                 } elseif (isset($item2[$subKey]) && $item2[$subKey] !== $value) {
                     if(!in_array($item['lessonNum'], $fachwechselLessons)) {
-                        $differences[] = handleDifference($subKey, $value, $item2[$subKey], $item, $fachwechselLessons, $array2);
+                        $differences[] = handleDifference($subKey, $value, $item2[$subKey], $item, $fachwechselLessons, $array2, $item2);
+                        $differences = array_filter($differences);
                     }
                 }
             }
@@ -1131,6 +1135,7 @@ function findChangedItems($array1, $array2, $canceledLessons, &$fachwechselLesso
         return $difference !== null;
     });
 }
+
 
 function findNewItems($array1, $array2): array {
     $differences = [];
@@ -1157,11 +1162,13 @@ function findNewItems($array1, $array2): array {
     return $differences;
 }
 
+
 function createDifference($message, $affectedLessons, $typeOfNotification, $oldValue = "", $miscellaneous = ""): array {
     return ['message' => $message, 'affectedLessons' => $affectedLessons, 'typeOfNotification' => $typeOfNotification, 'oldValue' => $oldValue, 'miscellaneous' => $miscellaneous];
 }
 
-function handleDifference($subKey, $value, $newValue, $item, &$fachwechselLessons, $array2): ?array {
+
+function handleDifference($subKey, $value, $newValue, $item, &$fachwechselLessons, $array2, $item2): ?array {
     $lessonNum = $item['lessonNum'];
     $subject = $item['subject'];
 
@@ -1170,6 +1177,22 @@ function handleDifference($subKey, $value, $newValue, $item, &$fachwechselLesson
     }
 
     $itemToUseForText = $array2[$item['lessonNum']] ?? "";
+
+
+    if ($newValue == "---") {
+        $subjectValue = createDifference("Fach ausgetragen", "$lessonNum. Stunde $subject", "sonstiges", $value);
+    } else {
+
+        // Only create a Fachwechsel, when the endTime is the same as before.
+        // When that's not the case, it gets later handles as a irregular lesson.
+        if($item["endTime"] == $item2["endTime"]) {
+
+            $subjectValue = createDifference("Fachwechsel zu $newValue", "$lessonNum. Stunde", "sonstiges", $value, " <br> Es könnte sein, dass sich auch Lehrer oder Raum geändert haben");
+        } else {
+            $subjectValue = [];
+        }
+
+    }
 
     return match ($subKey) {
         // If "code" previously was ..., then ...
@@ -1181,7 +1204,7 @@ function handleDifference($subKey, $value, $newValue, $item, &$fachwechselLesson
         },
         "teacher" => $newValue == "---" ? createDifference("Lehrer ausgetragen", "$lessonNum. Stunde $subject", "sonstiges", $value) : createDifference("Vertretung bei $newValue", "$lessonNum. Stunde $subject", "vertretung", $value, decideWhatTextToUse($itemToUseForText)),
         "room" => $newValue == "---" ? createDifference("Raum ausgetragen", "$lessonNum. Stunde $subject", "sonstiges", $value) : createDifference("Raumänderung zu $newValue", "$lessonNum. Stunde $subject", "raumänderung", $value),
-        "subject" => $newValue == "---" ? createDifference("Fach ausgetragen", "$lessonNum. Stunde $subject", "sonstiges", $value) : createDifference("Fachwechsel zu $newValue", "$lessonNum. Stunde", "sonstiges", $value, " <br> Es könnte sein, dass sich auch Lehrer oder Raum geändert haben"),
+        "subject" => $subjectValue,
         default => null,
     };
 }
@@ -1244,6 +1267,54 @@ function combineNotifications($differences): array {
 
 
 
+function checkAndCombineDifferencesForTheSameLesson(array $differences): array {
+    if (empty($differences)) {
+        return [];
+    }
+
+
+    usort($differences, function ($a, $b) {
+        return strcmp($a['affectedLessons'], $b['affectedLessons']);
+    });
+
+    $combinedDifferences = [];
+
+    $i = 0;
+    while($i < count($differences)) {
+        $combinedDifferences[] = $differences[$i];
+
+        if(isset($differences[$i + 1])) {
+            $lessonNumOfCurrentDifference = $differences[$i]['affectedLessons'];
+            $lessonNumOfCurrentDifference = explode(". ", $lessonNumOfCurrentDifference)[0];
+            $messageOfCurrentDifference = $differences[$i]['message'];
+
+            $lessonNumOfNextDifference = $differences[$i + 1]['affectedLessons'];
+            $lessonNumOfNextDifference = explode(". ", $lessonNumOfNextDifference)[0];
+            $messageOfNextDifference = $differences[$i + 1]['message'];
+
+            if ($lessonNumOfCurrentDifference == $lessonNumOfNextDifference && (str_contains($messageOfCurrentDifference, "Fachwechsel") || str_contains($messageOfNextDifference, "Fachwechsel"))) {
+                unset($combinedDifferences[count($combinedDifferences) - 1]); // Remove the last combined difference
+                $combinedDifferences = array_values($combinedDifferences);
+
+                $combinedDifferences[] = chooseFachwechselLesson($differences[$i], $differences[$i + 1]);
+                $i++;
+            }
+        }
+        $i++;
+    }
+    return $combinedDifferences;
+}
+
+
+function chooseFachwechselLesson(array $currentDifference, array $nextDifference): array {
+    if (str_contains($currentDifference['message'], "Fachwechsel")) {
+        return $currentDifference;
+    } elseif(str_contains($nextDifference['message'], "Fachwechsel")) {
+        return $nextDifference;
+    } else {
+        return $currentDifference;
+    }
+}
 
 
 
