@@ -64,6 +64,12 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
     for ($i = 0; $i < $notificationForDaysInAdvance; $i++) {
         $date = date("Ymd", strtotime("+$i days"));
         try {
+            $currentSchoolyear = getCurrentSchoolyear($login[0], $username, $conn);
+            $isDayInSchoolyear = isDayInSchoolyear($date, $currentSchoolyear);
+            if(!$isDayInSchoolyear) {
+                continue;
+            }
+
             $dailyDifferences = checkCompareAndUpdateTimetable($date, $conn, $login[0], $login[1], $username);
             $differences = array_merge($differences, $dailyDifferences);
         } catch (APIException $e) {
@@ -592,6 +598,28 @@ function getFormatedTimegrid($schoolTimegrid): array {
 
 
 
+function getCurrentSchoolyear(string $sessionId, string $username, mysqli $conn): array {
+    $payload = [
+        "id" => "fetchTimegridUnits_ts_example_" . time() . "_" . rand(),
+        "method" => "getCurrentSchoolyear",
+        "jsonrpc" => "2.0"
+    ];
+
+
+    try {
+        return sendApiRequest($sessionId, $payload, $username, $conn);
+    } catch (APIException $e) {
+        throw new APIException("Failed to fetch current schoolyear: " . $e->getMessage());
+    }
+}
+
+
+function isDayInSchoolyear($dateCurrent, $currentSchoolyear): bool {
+    $startDate = $currentSchoolyear["startDate"];
+    $endDate = $currentSchoolyear["endDate"];
+
+    return strtotime($dateCurrent) >= strtotime($startDate) && strtotime($dateCurrent) <= strtotime($endDate);
+}
 
 
 
