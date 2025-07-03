@@ -77,6 +77,8 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
             if (str_contains($errorMessage, '"not authenticated"') || str_contains($errorMessage, '"code":-8520')) {
                 Logger::log("API AUTHENTICATION ERROR: Halting timetable checks for user '$username' due to authentication failure. Date being checked: $date. Error: $errorMessage", $username);
                 return;
+            } elseif(str_contains($errorMessage, 'Date not in current schoolyear')) {
+                continue;
             } else {
                 Logger::log("API ERROR (non-auth): Error fetching timetable for user '$username' for date $date. Continuing to next day. Error: $errorMessage", $username);
             }
@@ -609,7 +611,11 @@ function getCurrentSchoolyear(string $sessionId, string $username, mysqli $conn)
     try {
         return sendApiRequest($sessionId, $payload, $username, $conn);
     } catch (APIException $e) {
-        throw new APIException("Failed to fetch current schoolyear: " . $e->getMessage());
+        if(str_contains($e->getMessage(), "-8998")){
+            throw new APIException("Failed to fetch current schoolyear: Date not in current schoolyear: " . $e->getMessage());
+        } else {
+            throw new APIException("Failed to fetch current schoolyear: " . $e->getMessage());
+        }
     }
 }
 
