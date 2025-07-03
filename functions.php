@@ -481,7 +481,10 @@ function sendApiRequest(string $sessionId, array $payload, string $username, mys
 
     if ($error) {
         curl_close($ch);
-        Logger::log(CURL_ERROR_PREFIX . $error, $username);
+        // Only log the error if it is not about the requested school year not being available. This happens every summer holiday and is safe to ignore.
+        if(!str_contains($error, "-8998")){
+            Logger::log(CURL_ERROR_PREFIX . $error, $username);
+        }
         throw new APIException(CURL_ERROR_PREFIX . $error);
     }
 
@@ -492,7 +495,6 @@ function sendApiRequest(string $sessionId, array $payload, string $username, mys
         return $result['result'];
     }
 
-    Logger::log(CURL_ERROR_PREFIX . "API request failed. Response: " . json_encode($result), $username);
     throw new APIException("API request failed. Response: " . json_encode($result));
 }
 
