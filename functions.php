@@ -25,6 +25,7 @@ const PREPARE_FAILED_PREFIX = 'Prepare failed: ';
 const PREVENTED_SENDING_EMAIL = 'Prevented sending email';
 
 
+
 /**
  * @param mysqli $conn
  * @param string $username
