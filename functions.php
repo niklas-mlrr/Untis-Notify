@@ -1376,7 +1376,7 @@ function sendEmails($differences, $username, $conn): void {
         $differences = json_encode($differences);
         Logger::log("Zu viele Benachrichtigungen ($differencesCount): $differences", $username);
         $differences = [];
-        $differences[] = createDifference("Das System wollte gerade $differencesCount Benachrichtigungen zu dir senden. Durch einen Sicherheitsmechanismus wurden diese abgefangen. Bitte wende dich an den Admin um zu erfahren, warum dir so viele Benachrichtigungen gesendet werden sollten.", "Zu viele Benachrichtigungen", "ausfall");
+        $differences[] = createDifference("Das System wollte gerade $differencesCount Benachrichtigungen zu dir senden. Durch einen Sicherheitsmechanismus wurden diese abgefangen. Dies könnte bspw. an einem Fehler des Systems, einer Änderung im Dictionary oder am Beginn eines neuen Schuljahres liegen. Bitte wende dich an den Admin, um genaueres zu erfahren.", "Zu viele Benachrichtigungen", "ausfall");
         $differences[0]['date'] = date("Ymd"); // Adding a date for this special case
     }
 
