@@ -65,8 +65,7 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
     for ($i = 0; $i < $notificationForDaysInAdvance; $i++) {
         $date = date("Ymd", strtotime("+$i days"));
         try {
-            $currentSchoolyear = getCurrentSchoolyear($login[0], $username, $conn);
-            $isDayInSchoolyear = isDayInSchoolyear($date, $currentSchoolyear);
+            $isDayInSchoolyear = isDayInSchoolyear($date, $login[0], $username, $conn);
             if(!$isDayInSchoolyear) {
                 continue;
             }
@@ -77,7 +76,7 @@ function initiateCheck(mysqli $conn, string $username, string $password): void {
             $errorMessage = $e->getMessage();
             if (str_contains($errorMessage, '"not authenticated"') || str_contains($errorMessage, '"code":-8520')) {
                 Logger::log("API AUTHENTICATION ERROR: Halting timetable checks for user '$username' due to authentication failure. Date being checked: $date. Error: $errorMessage", $username);
-                return;
+                continue;
             } elseif(str_contains($errorMessage, 'Date not in current schoolyear')) {
                 continue;
             } else {
@@ -623,11 +622,64 @@ function getCurrentSchoolyear(string $sessionId, string $username, mysqli $conn)
 }
 
 
-function isDayInSchoolyear($dateCurrent, $currentSchoolyear): bool {
-    $startDate = $currentSchoolyear["startDate"];
-    $endDate = $currentSchoolyear["endDate"];
+function getSchoolyears(string $sessionId, string $username, mysqli $conn): array {
+    $payload = [
+        "id" => "fetchTimegridUnits_ts_example_" . time() . "_" . rand(),
+        "method" => "getSchoolyears",
+        "jsonrpc" => "2.0"
+    ];
 
-    return strtotime($dateCurrent) >= strtotime($startDate) && strtotime($dateCurrent) <= strtotime($endDate);
+    try {
+        return sendApiRequest($sessionId, $payload, $username, $conn);
+    } catch (APIException $e) {
+        throw new APIException("Failed to fetch next schoolyear: " . $e->getMessage());
+    }
+}
+
+
+function getNextSchoolyear(string $sessionId, string $username, mysqli $conn): array {
+    try {
+        $schoolyears = getSchoolyears($sessionId, $username, $conn);
+        if (empty($schoolyears)) {
+            throw new APIException("No schoolyears found.");
+        }
+        $currentDate = date("Ymd");
+
+        foreach ($schoolyears as $schoolyear) {
+            if (strtotime($schoolyear['startDate']) > strtotime($currentDate)) {
+                return $schoolyear; // Return the first schoolyear that starts after the current date
+            }
+        }
+
+    } catch (APIException $e) {
+        throw new APIException("Failed to fetch next schoolyear: " . $e->getMessage());
+    }
+    throw new APIException("No next schoolyear found after the current date.");
+}
+
+
+/**
+ * @throws APIException
+ */
+function isDayInSchoolyear($dateCurrent, $login, $username, $conn): bool {
+
+    try {
+        $schoolyear = getCurrentSchoolyear($login, $username, $conn);
+    } catch (APIException $e) {
+        try {
+            $schoolyear = getNextSchoolyear($login, $username, $conn);
+        } catch (APIException $e) {
+            Logger::log("APIException: Could not fetch current or next schoolyear for user '$username'. Error: " . $e->getMessage(), $username);
+            throw new APIException("Date not in current schoolyear: " . $e->getMessage());
+        }
+    }
+
+    $currentSchoolyearStartDate = $schoolyear["startDate"];
+    $currentSchoolyearEndDate = $schoolyear["endDate"];
+
+
+    return strtotime($dateCurrent) >= strtotime($currentSchoolyearStartDate) && strtotime($dateCurrent) <= strtotime($currentSchoolyearEndDate);
+
 }
 
 
@@ -1278,28 +1330,119 @@ function combineNotifications($differences): array {
 
 
 
-    usort($differences, function ($a, $b) {
-        return strcmp($a['message'], $b['message']);
+
+    usort($differences, static function (array $a, array $b): int {
+        // Primary: by message (unchanged)
+        $cmp = strcmp($a['message'] ?? '', $b['message'] ?? '');
+        if ($cmp !== 0) {
+            return $cmp;
+        }
+
+        // Helper: extract the earliest numeric lesson from affectedLessons
+        $extractNum = static function ($val): ?int {
+            if (is_array($val)) {
+                $nums = [];
+                foreach ($val as $v) {
+                    if (is_int($v) || (is_string($v) && is_numeric($v))) {
+                        $nums[] = (int)$v;
+                    } elseif (is_string($v) && preg_match('/\d+/', $v, $m)) {
+                        $nums[] = (int)$m[0];
+                    }
+                }
+                return $nums ? min($nums) : null;
+            }
+
+            if (is_int($val) || (is_string($val) && is_numeric($val))) {
+                return (int)$val;
+            }
+            if (is_string($val) && preg_match('/\d+/', $val, $m)) {
+                return (int)$m[0];
+            }
+            return null; // no numeric info
+        };
+
+        $extractText = static function ($val): string {
+            if (is_array($val)) {
+                return implode(',', array_map(
+                    static fn($x) => is_scalar($x) ? (string)$x : '',
+                    $val
+                ));
+            }
+            return is_scalar($val) ? (string)$val : '';
+        };
+
+        $aNum = $extractNum($a['affectedLessons'] ?? null);
+        $bNum = $extractNum($b['affectedLessons'] ?? null);
+
+        // Secondary: numeric comparison (so 9 comes before 10 without zero-padding)
+        if ($aNum !== null || $bNum !== null) {
+            return ($aNum ?? PHP_INT_MAX) <=> ($bNum ?? PHP_INT_MAX);
+        }
+
+        // Fallback: natural string comparison if no numbers found
+        return strnatcasecmp($extractText($a['affectedLessons'] ?? ''), $extractText($b['affectedLessons'] ?? ''));
     });
 
 
-    $differencesOnlyLessonNum = [];
-    $differencesWithoutLessonNum = [];
+// Extract full lesson numbers and the remainder of the text (without the leading "X. ")
+    $lessonNums = [];
+    $differencesStripped = [];
 
     foreach ($differences as $difference) {
-
-        $differencesOnlyLessonNum[] = $difference["affectedLessons"][0];
-        $difference["affectedLessons"] = substr($difference["affectedLessons"], 1);
-        $differencesWithoutLessonNum[] = $difference;
+        $text = (string)($difference['affectedLessons'] ?? '');
+        if (preg_match('/^\s*(\d+)\.\s*(.*)$/u', $text, $m)) {
+            $lessonNums[] = (int)$m[1];
+            $difference['affectedLessons'] = $m[2]; // remainder, e.g. "Stunde sp71BM1"
+        } else {
+            $lessonNums[] = null;
+            $difference['affectedLessons'] = $text;
+        }
+        $differencesStripped[] = $difference;
     }
 
-    for ($i = 0; $i < count($differencesWithoutLessonNum) - 1; $i++) {
-        if ($differencesWithoutLessonNum[$i]['message'] == $differencesWithoutLessonNum[$i + 1]['message'] && $differencesWithoutLessonNum[$i]['affectedLessons'] == $differencesWithoutLessonNum[$i + 1]['affectedLessons'] && $differencesWithoutLessonNum[$i]['typeOfNotification'] == $differencesWithoutLessonNum[$i + 1]['typeOfNotification'] && $differencesWithoutLessonNum[$i]['oldValue'] == $differencesWithoutLessonNum[$i + 1]['oldValue']) {
-            $differences[$i]['affectedLessons'] = $differencesOnlyLessonNum[$i] . ". & " . $differencesOnlyLessonNum[$i + 1] . $differencesWithoutLessonNum[$i]['affectedLessons'];
-            unset($differences[$i   + 1]);
+    // Merge consecutive entries that have identical remainder and same metadata
+    $merged = [];
+    for ($i = 0; $i < count($differencesStripped); $i++) {
+        $curr = $differencesStripped[$i];
+        $next = $differencesStripped[$i + 1] ?? null;
+
+        $canMerge = $next
+            && ($curr['message'] ?? null) === ($next['message'] ?? null)
+            && ($curr['affectedLessons'] ?? null) === ($next['affectedLessons'] ?? null)
+            && ($curr['typeOfNotification'] ?? null) === ($next['typeOfNotification'] ?? null)
+            && ($curr['oldValue'] ?? null) === ($next['oldValue'] ?? null);
+
+        if ($canMerge) {
+            $aNum = $lessonNums[$i];
+            $bNum = $lessonNums[$i + 1];
+
+            if ($aNum !== null && $bNum !== null) {
+                // Example: "7. & 8. Stunde if71" or "9. & 10. Stunde sp71BM1"
+                $curr['affectedLessons'] = sprintf('%d. & %d. %s', $aNum, $bNum, $curr['affectedLessons']);
+            } else {
+                // Fallback if parsing failed
+                $curr['affectedLessons'] = sprintf(
+                    '%s & %s',
+                    (string)($differences[$i]['affectedLessons'] ?? ''),
+                    (string)($differences[$i + 1]['affectedLessons'] ?? '')
+                );
+            }
+
+            $merged[] = $curr;
+            $i++; // skip merged next
+        } else {
+            // Restore original display for non-merged items
+            $num = $lessonNums[$i];
+            $curr['affectedLessons'] = $num !== null
+                ? sprintf('%d. %s', $num, $curr['affectedLessons'])
+                : (string)($differences[$i]['affectedLessons'] ?? '');
+
+            $merged[] = $curr;
         }
     }
-    return $differences;
+
+    return $merged;
+
 }
 
 
