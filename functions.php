@@ -235,7 +235,7 @@ function getEmailBody($message, $oldValue, $miscellaneous): string {
 
 
     // Create a string with zero-width characters to only show certain information in the email preview
-    $previewStopper = str_repeat("&#847; ", 100);
+    $previewStopper = str_repeat("&#847; ", 200);
 
     $emailBody = '
         <html lang="de">
