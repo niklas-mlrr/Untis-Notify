@@ -422,7 +422,13 @@ function loginToWebUntis(string $username, string $password, bool $pwLoggingMode
         "jsonrpc" => "2.0"
     ];
 
-    $ch = curl_init("https://$serverName.webuntis.com/WebUntis/jsonrpc.do?school=$schoolName");
+    $url = sprintf(
+        "https://%s.webuntis.com/WebUntis/jsonrpc.do?school=%s",
+        $serverName,
+        rawurlencode($schoolName)
+    );
+
+    $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($loginPayload));
@@ -465,7 +471,11 @@ function sendApiRequest(string $sessionId, array $payload, string $username, mys
     $schoolName = getValueFromDatabase($conn, "users", "school_name", ["username" => $username], $username);
     $serverName = getValueFromDatabase($conn, "users", "server_name", ["username" => $username], $username);
 
-    $url = "https://$serverName.webuntis.com/WebUntis/jsonrpc.do?school=$schoolName";
+    $url = sprintf(
+        "https://%s.webuntis.com/WebUntis/jsonrpc.do?school=%s",
+        $serverName,
+        rawurlencode($schoolName)
+    );
 
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
