@@ -702,6 +702,7 @@ function cmp($a, $b) {
         return $a['lessonNum'] - $b['lessonNum'];
     } catch (Exception) {
         Logger::log("Error in cmp function");
+        Logger::log("LessonNum: " . $a['lessonNum']);
         exit();
     }
 }
