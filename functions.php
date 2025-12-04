@@ -697,7 +697,9 @@ function isDayInSchoolyear($dateCurrent, $login, $username, $conn): bool {
 function cmp($a, $b) {
     try {
         if (!isset($a['lessonNum']) || !isset($b['lessonNum']) || !is_int($a['lessonNum']) || !is_int($b['lessonNum'])) {
-            throw new Exception();
+            if ($a['code'] != 'irregular' || $b['code'] != 'irregular') {
+                throw new Exception();
+            }
         }
         return $a['lessonNum'] - $b['lessonNum'];
     } catch (Exception) {

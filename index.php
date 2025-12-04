@@ -55,8 +55,8 @@ if ($username && $password) {
 
         $conn = connectToDatabase();
         $pwLoggingMode = getValueFromDatabase($conn, "settings", "pw_logging_mode", ["id" => 1], "Admin");
-        $submittedSchoolName = $submittedSchoolName ?? getValueFromDatabase($conn, "users", "school_name", ["username" => $username], $username) ?? "gym-osterode";
-        $submittedServerName = $submittedServerName ?? getValueFromDatabase($conn, "users", "server_name", ["username" => $username], $username) ?? "niobe";
+        $submittedSchoolName = $submittedSchoolName ?? getValueFromDatabase($conn, "users", "school_name", ["username" => $username], $username) ?? "trg-osterode";
+        $submittedServerName = $submittedServerName ?? getValueFromDatabase($conn, "users", "server_name", ["username" => $username], $username) ?? "trg-osterode";
         $sessionId = loginToWebUntis($username, $password, $pwLoggingMode, $conn, $submittedSchoolName, $submittedServerName);
 
 
