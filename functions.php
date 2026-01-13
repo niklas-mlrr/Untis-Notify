@@ -15,7 +15,14 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
-require 'vendor/autoload.php';
+$composerAutoloadPath = __DIR__ . '/vendor/autoload.php';
+if (file_exists($composerAutoloadPath)) {
+    require_once $composerAutoloadPath;
+} else {
+    require_once __DIR__ . '/vendor/phpmailer/phpmailer/src/Exception.php';
+    require_once __DIR__ . '/vendor/phpmailer/phpmailer/src/PHPMailer.php';
+    require_once __DIR__ . '/vendor/phpmailer/phpmailer/src/SMTP.php';
+}
 
 
 
@@ -756,7 +763,11 @@ function replaceSubjectWords(string $subject, string $replacements): string {
     if (!$replacements) {
         return $subject;
     }
-    return str_replace(array_keys($replacements), array_values($replacements), $subject);
+    $subjectTrimmed = trim($subject);
+    if (array_key_exists($subjectTrimmed, $replacements)) {
+        return $replacements[$subjectTrimmed];
+    }
+    return $subject;
 }
 
 

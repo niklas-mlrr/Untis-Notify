@@ -3,3 +3,5 @@ config.php
 TestingEnv.php
 
 *.log
+.idea/
+.DS_Store
