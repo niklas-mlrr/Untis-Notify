@@ -687,8 +687,7 @@ function isDayInSchoolyear($dateCurrent, $login, $username, $conn): bool {
             $schoolyear = getNextSchoolyear($login, $username, $conn);
         } catch (APIException $e) {
             // During summer break or other gaps between schoolyears, no schoolyear will be found
-            // In this case, the day is not in any schoolyear, so return false instead of throwing
-            Logger::log("No current or next schoolyear found for user '$username'. Treating date as not in schoolyear (likely summer break). Error: " . $e->getMessage(), $username);
+            // In this case, the day is not in any schoolyear, so return false silently
             return false;
         }
     }
