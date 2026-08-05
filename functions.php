@@ -1542,7 +1542,7 @@ function sendEmails($differences, $username, $conn): void {
 
     $differencesCount = count($differences);
 
-    if ($differencesCount >= 20) {
+    if ($differencesCount >= 10) {
         $differences = json_encode($differences);
         Logger::log("Zu viele Benachrichtigungen ($differencesCount): $differences", $username);
         $differences = [];
