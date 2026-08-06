@@ -1,5 +1,29 @@
 # Untis Notify
 
+Ein Benachrichtigungsdienst für persönliche Stundenplanänderungen in WebUntis.
+Er vergleicht Stundenpläne regelmäßig und sendet bei Ausfall, Vertretung oder
+Raumänderung eine E-Mail.
+
+**Live:** [untis-notify.de](https://untis-notify.de)
+
+## Kurzüberblick
+
+Untis Notify ist während meines Schülerpraktikums bei Lindbaum entstanden und
+wird seit 2025 als eigenes Projekt weiterentwickelt. Mehrere Mitschülerinnen
+und Mitschüler nutzen den Dienst für ihre Stundenpläne.
+
+**Was der Dienst macht:**
+
+- fragt persönliche Stundenpläne regelmäßig ab und speichert den letzten Stand
+- erkennt Ausfälle, Vertretungen, Raumänderungen und sonstige Änderungen
+- versendet E-Mail-Benachrichtigungen für einen einstellbaren Zeitraum
+- erlaubt eigene Fachkürzel für besser lesbare Benachrichtigungen
+
+**Technik:** PHP, MySQL, Cron, WebUntis-Anbindung über HTTP und PHPMailer.
+
+Das Projekt ist auf den tatsächlichen Einsatz an meiner Schule zugeschnitten;
+dieses Repository zeigt den Quellcode und die Oberfläche, ist aber kein
+generisches, fertig konfigurierbares Produkt.
 
 ## Screenshots
 
